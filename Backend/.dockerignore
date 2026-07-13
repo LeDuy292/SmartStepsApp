@@ -1,0 +1,9 @@
+bin
+obj
+temp-build
+Migrations.SqlServer.Legacy
+.git
+.gitignore
+.env
+Dockerfile*
+README.md

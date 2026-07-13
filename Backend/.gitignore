@@ -1,0 +1,89 @@
+# Build output
+[Bb]in/
+[Oo]bj/
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+[Aa][Rr][Mm]/
+[Aa][Rr][Mm]64/
+publish/
+artifacts/
+
+# Visual Studio
+.vs/
+*.user
+*.rsuser
+*.suo
+*.userosscache
+*.sln.docstates
+*.ncrunch*
+*.DotSettings.user
+
+# Visual Studio Code
+.vscode/*
+!.vscode/settings.json
+!.vscode/launch.json
+!.vscode/tasks.json
+!.vscode/extensions.json
+
+# JetBrains Rider
+.idea/
+*.sln.iml
+
+# ASP.NET Core local configuration and secrets
+appsettings.Local.json
+appsettings.*.local.json
+appsettings.Development.json
+appsettings.Secrets.json
+appsettings.Production.json
+secrets.json
+*.pfx
+*.p12
+*.pem
+*.key
+*.crt
+
+# Logs and diagnostics
+*.log
+logs/
+LogFiles/
+*.trace
+*.etl
+
+# Test results and coverage
+TestResults/
+*.trx
+*.coverage
+*.coveragexml
+coverage/
+coverage.cobertura.xml
+coverage.opencover.xml
+lcov.info
+
+# NuGet
+*.nupkg
+*.snupkg
+packages/
+*.nuget.props
+*.nuget.targets
+project.lock.json
+
+# EF Core generated bundles
+efbundle*
+
+# Runtime generated files
+wwwroot/uploads/
+Uploads/
+Temp/
+tmp/
+
+# OS files
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Keep placeholder files for empty directories
+!**/.gitkeep
+
+.env
