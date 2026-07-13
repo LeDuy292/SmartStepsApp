@@ -15,6 +15,45 @@ GET /api/situations
 GET /api/situations/{id}
 ```
 
+## Learning progress and parent reports
+
+The backend records resumable progress and evaluates answers on the server so
+the mobile app cannot change the configured correct answer.
+
+```http
+POST /api/progress/start
+PUT  /api/progress/step
+POST /api/progress/answer
+POST /api/progress/complete
+```
+
+Generate a 30-day report after the child has completed at least one lesson:
+
+```http
+POST /api/learning-analysis/{childId}/reports
+Content-Type: application/json
+
+{}
+```
+
+Custom periods use UTC timestamps in `periodFrom` and `periodTo`. The rule
+engine calculates completion, accuracy, skill mastery and recommendations
+before any narrative is produced. Only published situations can be
+recommended.
+
+```http
+GET  /api/learning-analysis/{childId}/reports/latest
+GET  /api/learning-analysis/{childId}/recommendations
+POST /api/learning-analysis/{childId}/recommendations/{situationId}/review
+PATCH /api/learning-analysis/{childId}/recommendations/{recommendationId}
+```
+
+The current local implementation uses an approved rule-based Vietnamese
+narrative and records `RuleBasedFallback` in `AIAnalysisLog`. This keeps reports
+available without sending personal or raw learning history to an external AI
+provider. A provider-specific narrative generator can be added behind
+`ILearningAnalysisService` once its endpoint, model and credentials are chosen.
+
 ## Private Cloudinary media
 
 Use the backend to create short-lived signed URLs for private Cloudinary media. Do not put the Cloudinary API secret in the mobile app.

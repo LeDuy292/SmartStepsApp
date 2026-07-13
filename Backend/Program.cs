@@ -50,6 +50,7 @@ builder.Services.Configure<PayOsOptions>(
 builder.Services.AddHttpClient<ICloudinaryMediaService, CloudinaryMediaService>();
 builder.Services.AddHttpClient<IPayOsService, PayOsService>();
 builder.Services.AddHostedService<DatabaseMigrationService>();
+builder.Services.AddScoped<ILearningAnalysisService, LearningAnalysisService>();
 
 builder.Services.AddControllers();
 
