@@ -20,33 +20,73 @@ const registrationLearningGoals = [
 class RegistrationNameStep extends StatelessWidget {
   const RegistrationNameStep({
     super.key,
-    required this.controller,
-    required this.onChanged,
+    required this.nameController,
+    required this.emailController,
+    required this.passwordController,
+    required this.onNameChanged,
+    required this.onEmailChanged,
+    required this.onPasswordChanged,
   });
 
-  final TextEditingController controller;
-  final ValueChanged<String> onChanged;
+  final TextEditingController nameController;
+  final TextEditingController emailController;
+  final TextEditingController passwordController;
+  final ValueChanged<String> onNameChanged;
+  final ValueChanged<String> onEmailChanged;
+  final ValueChanged<String> onPasswordChanged;
 
   @override
   Widget build(BuildContext context) {
     return _StepFrame(
-      title: 'Bé tên là gì?',
-      subtitle: 'Tên này sẽ xuất hiện trong bài học và phần thưởng.',
+      title: 'Tạo tài khoản',
+      subtitle: 'Thông tin này dùng để đăng nhập và lưu tiến độ.',
       mascotAsset: 'assets/images/mascot/mascot-cat-happy-wave.webp',
-      child: TextField(
-        key: const ValueKey('registration-name-field'),
-        controller: controller,
-        autofocus: true,
-        textCapitalization: TextCapitalization.words,
-        textInputAction: TextInputAction.done,
-        maxLength: 40,
-        onChanged: onChanged,
-        style: const TextStyle(
-          color: DuoColors.textPrimary,
-          fontSize: 21,
-          fontWeight: FontWeight.w800,
-        ),
-        decoration: _inputDecoration('Tên của bé'),
+      child: Column(
+        children: [
+          TextField(
+            key: const ValueKey('registration-name-field'),
+            controller: nameController,
+            autofocus: true,
+            textCapitalization: TextCapitalization.words,
+            textInputAction: TextInputAction.next,
+            maxLength: 40,
+            onChanged: onNameChanged,
+            style: const TextStyle(
+              color: DuoColors.textPrimary,
+              fontSize: 18,
+              fontWeight: FontWeight.w700,
+            ),
+            decoration: _inputDecoration('Tên của bé'),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            key: const ValueKey('registration-email-field'),
+            controller: emailController,
+            keyboardType: TextInputType.emailAddress,
+            textInputAction: TextInputAction.next,
+            onChanged: onEmailChanged,
+            style: const TextStyle(
+              color: DuoColors.textPrimary,
+              fontSize: 18,
+              fontWeight: FontWeight.w700,
+            ),
+            decoration: _inputDecoration('Email phụ huynh'),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            key: const ValueKey('registration-password-field'),
+            controller: passwordController,
+            obscureText: true,
+            textInputAction: TextInputAction.done,
+            onChanged: onPasswordChanged,
+            style: const TextStyle(
+              color: DuoColors.textPrimary,
+              fontSize: 18,
+              fontWeight: FontWeight.w700,
+            ),
+            decoration: _inputDecoration('Mật khẩu'),
+          ),
+        ],
       ),
     );
   }

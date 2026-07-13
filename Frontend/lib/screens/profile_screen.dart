@@ -592,10 +592,8 @@ Future<bool?> _showLogoutConfirmation(BuildContext context) {
     context: context,
     builder: (dialogContext) {
       return AlertDialog(
-        title: const Text('Đăng xuất khỏi SmartSteps?'),
-        content: const Text(
-          'Ứng dụng sẽ xóa hồ sơ local và tiến độ đã lưu trên thiết bị này.',
-        ),
+        title: const Text('Đăng xuất'),
+        content: const Text('Bạn có chắc chắn muốn đăng xuất?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(false),

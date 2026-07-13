@@ -28,6 +28,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
   late final RegistrationViewModel _viewModel;
   late final bool _ownsViewModel;
   late final TextEditingController _nameController;
+  late final TextEditingController _emailController;
+  late final TextEditingController _passwordController;
 
   @override
   void initState() {
@@ -37,11 +39,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
         widget.viewModel ??
         RegistrationViewModel(profileStorage: widget.profileStorage);
     _nameController = TextEditingController(text: _viewModel.draft.childName);
+    _emailController = TextEditingController(text: _viewModel.draft.email);
+    _passwordController = TextEditingController(text: _viewModel.draft.password);
   }
 
   @override
   void dispose() {
     _nameController.dispose();
+    _emailController.dispose();
+    _passwordController.dispose();
     if (_ownsViewModel) {
       _viewModel.dispose();
     }
@@ -130,8 +136,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
   Widget _buildStep(List<RegistrationAvatar> avatars) {
     return switch (_viewModel.currentStep) {
       RegistrationStep.name => RegistrationNameStep(
-        controller: _nameController,
-        onChanged: _viewModel.updateName,
+        nameController: _nameController,
+        emailController: _emailController,
+        passwordController: _passwordController,
+        onNameChanged: _viewModel.updateName,
+        onEmailChanged: _viewModel.updateEmail,
+        onPasswordChanged: _viewModel.updatePassword,
       ),
       RegistrationStep.age => RegistrationAgeStep(
         selectedAge: _viewModel.draft.age,

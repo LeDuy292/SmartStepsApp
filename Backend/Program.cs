@@ -2,6 +2,9 @@ using Microsoft.EntityFrameworkCore;
 using SmartStepsServer.Data;
 using SmartStepsServer.Options;
 using SmartStepsServer.Services;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
 
 LoadDotEnv(Path.Combine(AppContext.BaseDirectory, ".env"));
 LoadDotEnv(Path.Combine(Directory.GetCurrentDirectory(), ".env"));
@@ -68,8 +71,25 @@ builder.Services.AddCors(options =>
     });
 });
 
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            ValidIssuer = builder.Configuration["Jwt:Issuer"],
+            ValidAudience = builder.Configuration["Jwt:Audience"],
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]!))
+        };
+    });
+
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+
+builder.Services.AddScoped<SmartStepsServer.Services.IEmailService, SmartStepsServer.Services.EmailService>();
 
 var app = builder.Build();
 
@@ -87,6 +107,7 @@ if (builder.Configuration.GetValue<bool>("HttpsRedirection:Enabled"))
 // CORS phải đặt trước Authorization
 app.UseCors(AllowReactApp);
 
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapGet("/health", () => Results.Text("OK"));
