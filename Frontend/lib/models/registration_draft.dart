@@ -8,6 +8,8 @@ class RegistrationDraft {
     this.learningGoals = const {},
     this.avatarStoragePath,
     this.acceptedTerms = false,
+    this.email = '',
+    this.password = '',
   });
 
   final String childName;
@@ -16,6 +18,8 @@ class RegistrationDraft {
   final Set<String> learningGoals;
   final String? avatarStoragePath;
   final bool acceptedTerms;
+  final String email;
+  final String password;
 
   RegistrationDraft copyWith({
     String? childName,
@@ -24,6 +28,8 @@ class RegistrationDraft {
     Set<String>? learningGoals,
     String? avatarStoragePath,
     bool? acceptedTerms,
+    String? email,
+    String? password,
   }) {
     return RegistrationDraft(
       childName: childName ?? this.childName,
@@ -32,6 +38,8 @@ class RegistrationDraft {
       learningGoals: learningGoals ?? this.learningGoals,
       avatarStoragePath: avatarStoragePath ?? this.avatarStoragePath,
       acceptedTerms: acceptedTerms ?? this.acceptedTerms,
+      email: email ?? this.email,
+      password: password ?? this.password,
     );
   }
 

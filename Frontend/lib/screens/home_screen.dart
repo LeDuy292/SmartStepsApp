@@ -20,6 +20,7 @@ import '../theme/duo_theme.dart';
 import '../utils/platform_environment.dart';
 import '../widgets/duo_components.dart';
 import '../widgets/smartsteps_press_effect.dart';
+import '../services/auth_service.dart';
 import 'app_feedback_dialog.dart';
 import 'learn_screen.dart';
 import 'login_screen.dart';
@@ -657,8 +658,10 @@ class _SmartStepsAppState extends State<SmartStepsApp> {
     );
   }
 
-  void _handleLogout(BuildContext context) {
+  void _handleLogout(BuildContext context) async {
     _hasCompletedInitialSurvey = false;
+    await AuthService().logout();
+    if (!context.mounted) return;
     Navigator.of(context).pushAndRemoveUntil(
       MaterialPageRoute<void>(
         builder: (_) => LoginScreen(

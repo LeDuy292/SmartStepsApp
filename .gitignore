@@ -1,0 +1,33 @@
+# Flutter/Dart/Pub
+.dart_tool/
+.packages
+build/
+.flutter-plugins
+.flutter-plugins-dependencies
+.pub-cache/
+.pub/
+/build/
+
+# IDEs and Editors
+.idea/
+.vscode/
+*.iml
+*.iws
+
+# Logs
+*.log
+
+# Windows
+Thumbs.db
+Desktop.ini
+
+# Mac
+.DS_Store
+
+# Backend
+Backend/bin/
+Backend/obj/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
