@@ -25,6 +25,10 @@ public class SmartStepsDbContext : DbContext
     public DbSet<PremiumSubscription> PremiumSubscriptions { get; set; } = null!;
     public DbSet<PremiumPayment> PremiumPayments { get; set; } = null!;
     public DbSet<PremiumCodeRedemption> PremiumCodeRedemptions { get; set; } = null!;
+    public DbSet<LearningReport> LearningReports { get; set; } = null!;
+    public DbSet<LessonRecommendation> LessonRecommendations { get; set; } = null!;
+    public DbSet<SkillAssessment> SkillAssessments { get; set; } = null!;
+    public DbSet<AIAnalysisLog> AIAnalysisLogs { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -333,6 +337,98 @@ public class SmartStepsDbContext : DbContext
             entity.HasOne(e => e.Subscription)
                 .WithMany(e => e.CodeRedemptions)
                 .HasForeignKey(e => e.SubscriptionId)
+                .OnDelete(DeleteBehavior.NoAction);
+        });
+
+        modelBuilder.Entity<LearningReport>(entity =>
+        {
+            entity.ToTable("LearningReport", table =>
+            {
+                table.HasCheckConstraint("CK_LearningReport_Period", "\"PeriodTo\" >= \"PeriodFrom\"");
+                table.HasCheckConstraint("CK_LearningReport_CorrectRate", "\"CorrectRate\" >= 0 AND \"CorrectRate\" <= 1");
+            });
+            entity.HasKey(e => e.ReportId);
+            entity.HasIndex(e => new { e.ChildId, e.PeriodFrom, e.PeriodTo });
+            entity.Property(e => e.CorrectRate).HasPrecision(5, 4);
+            entity.Property(e => e.Summary).IsRequired();
+            entity.Property(e => e.Strengths).IsRequired();
+            entity.Property(e => e.AreasForImprovement).IsRequired();
+            entity.Property(e => e.ParentAdvice).IsRequired();
+            entity.HasOne(e => e.Child)
+                .WithMany(e => e.LearningReports)
+                .HasForeignKey(e => e.ChildId)
+                .OnDelete(DeleteBehavior.NoAction);
+        });
+
+        modelBuilder.Entity<LessonRecommendation>(entity =>
+        {
+            entity.ToTable("LessonRecommendation", table =>
+            {
+                table.HasCheckConstraint(
+                    "CK_LessonRecommendation_Type",
+                    "\"RecommendationType\" IN ('NextLesson', 'Review', 'WeakSkill', 'PeriodicReview')");
+                table.HasCheckConstraint(
+                    "CK_LessonRecommendation_Status",
+                    "\"Status\" IN ('Pending', 'Completed', 'Dismissed')");
+                table.HasCheckConstraint("CK_LessonRecommendation_Priority", "\"Priority\" >= 0 AND \"Priority\" <= 100");
+            });
+            entity.HasKey(e => e.RecommendationId);
+            entity.HasIndex(e => new { e.ChildId, e.Status, e.Priority });
+            entity.Property(e => e.RecommendationType).HasColumnType("varchar(30)").HasMaxLength(30).IsRequired();
+            entity.Property(e => e.Status).HasColumnType("varchar(30)").HasMaxLength(30).IsRequired();
+            entity.Property(e => e.Reason).IsRequired();
+            entity.HasOne(e => e.Child)
+                .WithMany(e => e.LessonRecommendations)
+                .HasForeignKey(e => e.ChildId)
+                .OnDelete(DeleteBehavior.NoAction);
+            entity.HasOne(e => e.Situation)
+                .WithMany(e => e.LessonRecommendations)
+                .HasForeignKey(e => e.SituationId)
+                .OnDelete(DeleteBehavior.NoAction);
+        });
+
+        modelBuilder.Entity<SkillAssessment>(entity =>
+        {
+            entity.ToTable("SkillAssessment", table =>
+            {
+                table.HasCheckConstraint(
+                    "CK_SkillAssessment_MasteryLevel",
+                    "\"MasteryLevel\" IN ('NotAchieved', 'NeedsReview', 'Achieved', 'Mastered')");
+                table.HasCheckConstraint("CK_SkillAssessment_CorrectRate", "\"CorrectRate\" >= 0 AND \"CorrectRate\" <= 1");
+            });
+            entity.HasKey(e => e.AssessmentId);
+            entity.HasIndex(e => new { e.ChildId, e.SkillId }).IsUnique();
+            entity.Property(e => e.CorrectRate).HasPrecision(5, 4);
+            entity.Property(e => e.MasteryLevel).HasColumnType("varchar(30)").HasMaxLength(30).IsRequired();
+            entity.HasOne(e => e.Child)
+                .WithMany(e => e.SkillAssessments)
+                .HasForeignKey(e => e.ChildId)
+                .OnDelete(DeleteBehavior.NoAction);
+            entity.HasOne(e => e.Skill)
+                .WithMany(e => e.SkillAssessments)
+                .HasForeignKey(e => e.SkillId)
+                .OnDelete(DeleteBehavior.NoAction);
+        });
+
+        modelBuilder.Entity<AIAnalysisLog>(entity =>
+        {
+            entity.ToTable("AIAnalysisLog", table =>
+            {
+                table.HasCheckConstraint("CK_AIAnalysisLog_Status", "\"Status\" IN ('Succeeded', 'Fallback', 'Failed', 'Skipped')");
+            });
+            entity.HasKey(e => e.AnalysisId);
+            entity.HasIndex(e => new { e.ChildId, e.CreatedAt });
+            entity.Property(e => e.RequestData).HasColumnType("jsonb").IsRequired();
+            entity.Property(e => e.ResponseData).HasColumnType("jsonb");
+            entity.Property(e => e.ModelName).HasColumnType("varchar(100)").HasMaxLength(100).IsRequired();
+            entity.Property(e => e.Status).HasColumnType("varchar(30)").HasMaxLength(30).IsRequired();
+            entity.HasOne(e => e.Child)
+                .WithMany(e => e.AIAnalysisLogs)
+                .HasForeignKey(e => e.ChildId)
+                .OnDelete(DeleteBehavior.NoAction);
+            entity.HasOne(e => e.Report)
+                .WithMany(e => e.AIAnalysisLogs)
+                .HasForeignKey(e => e.ReportId)
                 .OnDelete(DeleteBehavior.NoAction);
         });
 
