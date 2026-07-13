@@ -23,4 +23,5 @@ public class Skill
     // Navigation properties
     public ICollection<SituationSkill> SituationSkills { get; set; } = new List<SituationSkill>();
     public ICollection<ParentReviewQuestion> ParentReviewQuestions { get; set; } = new List<ParentReviewQuestion>();
+    public ICollection<SkillAssessment> SkillAssessments { get; set; } = new List<SkillAssessment>();
 }

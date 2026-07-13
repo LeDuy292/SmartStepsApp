@@ -39,4 +39,6 @@ public class Situation
     public ICollection<SituationSkill> SituationSkills { get; set; } = new List<SituationSkill>();
     public ICollection<UserProgress> UserProgresses { get; set; } = new List<UserProgress>();
     public ICollection<ParentReviewQuestion> ParentReviewQuestions { get; set; } = new List<ParentReviewQuestion>();
+    public ICollection<LessonRecommendation> LessonRecommendations { get; set; } =
+        new List<LessonRecommendation>();
 }

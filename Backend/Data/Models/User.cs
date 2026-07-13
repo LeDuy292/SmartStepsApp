@@ -48,4 +48,9 @@ public class User
     public ICollection<PremiumPayment> PremiumPayments { get; set; } = new List<PremiumPayment>();
     public ICollection<PremiumCodeRedemption> PremiumCodeRedemptions { get; set; } =
         new List<PremiumCodeRedemption>();
+    public ICollection<LearningReport> LearningReports { get; set; } = new List<LearningReport>();
+    public ICollection<LessonRecommendation> LessonRecommendations { get; set; } =
+        new List<LessonRecommendation>();
+    public ICollection<SkillAssessment> SkillAssessments { get; set; } = new List<SkillAssessment>();
+    public ICollection<AIAnalysisLog> AIAnalysisLogs { get; set; } = new List<AIAnalysisLog>();
 }
