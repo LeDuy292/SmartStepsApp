@@ -34,6 +34,20 @@ public sealed class DatabaseMigrationService(
                 var dbContext = scope.ServiceProvider.GetRequiredService<SmartStepsDbContext>();
 
                 await dbContext.Database.MigrateAsync(stoppingToken);
+                
+                if (!await dbContext.Users.AnyAsync(u => u.Role == "Admin", stoppingToken))
+                {
+                    dbContext.Users.Add(new SmartStepsServer.Data.Models.User
+                    {
+                        FullName = "Administrator",
+                        Email = "admin@smartsteps.vn",
+                        Password = BCrypt.Net.BCrypt.HashPassword("Admin@123"),
+                        Role = "Admin",
+                        CreatedAt = DateTime.UtcNow
+                    });
+                    await dbContext.SaveChangesAsync(stoppingToken);
+                }
+
                 logger.LogInformation("Database migrations completed successfully.");
                 return;
             }

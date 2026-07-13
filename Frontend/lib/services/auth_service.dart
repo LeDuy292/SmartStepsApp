@@ -86,7 +86,7 @@ class AuthService {
 
   Future<bool> processGoogleUser(GoogleSignInAccount googleUser) async {
     try {
-      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+      final GoogleSignInAuthentication googleAuth = googleUser.authentication;
       final String? idToken = googleAuth.idToken;
 
       if (idToken == null) return false;

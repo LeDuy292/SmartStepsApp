@@ -26,6 +26,7 @@ class RegistrationNameStep extends StatelessWidget {
     required this.onNameChanged,
     required this.onEmailChanged,
     required this.onPasswordChanged,
+    this.isSurveyOnly = false,
   });
 
   final TextEditingController nameController;
@@ -34,6 +35,7 @@ class RegistrationNameStep extends StatelessWidget {
   final ValueChanged<String> onNameChanged;
   final ValueChanged<String> onEmailChanged;
   final ValueChanged<String> onPasswordChanged;
+  final bool isSurveyOnly;
 
   @override
   Widget build(BuildContext context) {
@@ -58,34 +60,36 @@ class RegistrationNameStep extends StatelessWidget {
             ),
             decoration: _inputDecoration('Tên của bé'),
           ),
-          const SizedBox(height: 12),
-          TextField(
-            key: const ValueKey('registration-email-field'),
-            controller: emailController,
-            keyboardType: TextInputType.emailAddress,
-            textInputAction: TextInputAction.next,
-            onChanged: onEmailChanged,
-            style: const TextStyle(
-              color: DuoColors.textPrimary,
-              fontSize: 18,
-              fontWeight: FontWeight.w700,
+          if (!isSurveyOnly) ...[
+            const SizedBox(height: 12),
+            TextField(
+              key: const ValueKey('registration-email-field'),
+              controller: emailController,
+              keyboardType: TextInputType.emailAddress,
+              textInputAction: TextInputAction.next,
+              onChanged: onEmailChanged,
+              style: const TextStyle(
+                color: DuoColors.textPrimary,
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+              ),
+              decoration: _inputDecoration('Email phụ huynh'),
             ),
-            decoration: _inputDecoration('Email phụ huynh'),
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            key: const ValueKey('registration-password-field'),
-            controller: passwordController,
-            obscureText: true,
-            textInputAction: TextInputAction.done,
-            onChanged: onPasswordChanged,
-            style: const TextStyle(
-              color: DuoColors.textPrimary,
-              fontSize: 18,
-              fontWeight: FontWeight.w700,
+            const SizedBox(height: 12),
+            TextField(
+              key: const ValueKey('registration-password-field'),
+              controller: passwordController,
+              obscureText: true,
+              textInputAction: TextInputAction.done,
+              onChanged: onPasswordChanged,
+              style: const TextStyle(
+                color: DuoColors.textPrimary,
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+              ),
+              decoration: _inputDecoration('Mật khẩu'),
             ),
-            decoration: _inputDecoration('Mật khẩu'),
-          ),
+          ],
         ],
       ),
     );
