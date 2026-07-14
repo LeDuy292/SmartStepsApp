@@ -1,5 +1,6 @@
-using System.ComponentModel.DataAnnotations;
+using System.Security.Claims;
 using System.Text.Json;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
@@ -71,32 +72,45 @@ public sealed class PremiumController : ControllerBase
     }
 
     [HttpPost("account")]
+    [Authorize]
     [ProducesResponseType(typeof(PremiumAccountResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<PremiumAccountResponse>> EnsureAccount(
         PremiumAccountRequest request,
         CancellationToken cancellationToken)
     {
-        User user;
-        try
+        if (!TryGetCurrentUserId(out var currentUserId))
         {
-            user = await EnsureUserAsync(request.Email, request.FullName, cancellationToken);
+            return Forbid();
         }
-        catch (BadHttpRequestException ex)
+        var user = await _dbContext.Users.SingleOrDefaultAsync(
+            item => item.UserId == currentUserId,
+            cancellationToken);
+        if (user is null)
         {
-            return BadRequest(new { message = ex.Message });
+            return NotFound(new { message = "Premium account was not found." });
+        }
+        if (!EmailMatchesUser(request.Email, user))
+        {
+            return Forbid();
         }
 
         return Ok(new PremiumAccountResponse(user.UserId, user.Email, user.FullName));
     }
 
     [HttpGet("status/{userId:int}")]
+    [Authorize]
     [ProducesResponseType(typeof(PremiumStatusResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<PremiumStatusResponse>> GetStatus(
         int userId,
         CancellationToken cancellationToken)
     {
+        if (!CanAccessUser(userId))
+        {
+            return Forbid();
+        }
+
         var userExists = await _dbContext.Users
             .AsNoTracking()
             .AnyAsync(user => user.UserId == userId, cancellationToken);
@@ -110,6 +124,7 @@ public sealed class PremiumController : ControllerBase
     }
 
     [HttpPost("redeem-code")]
+    [Authorize]
     [ProducesResponseType(typeof(PremiumStatusResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status409Conflict)]
@@ -117,18 +132,20 @@ public sealed class PremiumController : ControllerBase
         RedeemPremiumCodeRequest request,
         CancellationToken cancellationToken)
     {
-        User user;
-        try
+        if (!TryResolveRequestedUserId(request.UserId, out var targetUserId))
         {
-            user = await ResolveUserAsync(
-                request.UserId,
-                request.Email,
-                request.FullName,
-                cancellationToken);
+            return Forbid();
         }
-        catch (BadHttpRequestException ex)
+        var user = await _dbContext.Users.SingleOrDefaultAsync(
+            item => item.UserId == targetUserId,
+            cancellationToken);
+        if (user is null)
         {
-            return BadRequest(new { message = ex.Message });
+            return NotFound(new { message = "Premium account was not found." });
+        }
+        if (!EmailMatchesUser(request.Email, user))
+        {
+            return Forbid();
         }
 
         var normalizedCode = NormalizeCode(request.Code);
@@ -177,6 +194,7 @@ public sealed class PremiumController : ControllerBase
     }
 
     [HttpPost("payments")]
+    [Authorize]
     [ProducesResponseType(typeof(CreatePremiumPaymentResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status503ServiceUnavailable)]
@@ -189,18 +207,20 @@ public sealed class PremiumController : ControllerBase
             return BadRequest(new { message = "Unknown premium plan." });
         }
 
-        User user;
-        try
+        if (!TryResolveRequestedUserId(request.UserId, out var targetUserId))
         {
-            user = await ResolveUserAsync(
-                request.UserId,
-                request.Email,
-                request.FullName,
-                cancellationToken);
+            return Forbid();
         }
-        catch (BadHttpRequestException ex)
+        var user = await _dbContext.Users.SingleOrDefaultAsync(
+            item => item.UserId == targetUserId,
+            cancellationToken);
+        if (user is null)
         {
-            return BadRequest(new { message = ex.Message });
+            return NotFound(new { message = "Premium account was not found." });
+        }
+        if (!EmailMatchesUser(request.Email, user))
+        {
+            return Forbid();
         }
 
         var orderCode = await GenerateOrderCodeAsync(cancellationToken);
@@ -333,6 +353,7 @@ public sealed class PremiumController : ControllerBase
     }
 
     [HttpPost("payments/{orderCode:long}/confirm")]
+    [Authorize]
     [ProducesResponseType(typeof(PremiumStatusResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<PremiumStatusResponse>> ConfirmPayment(
@@ -340,9 +361,20 @@ public sealed class PremiumController : ControllerBase
         ConfirmPremiumPaymentRequest request,
         CancellationToken cancellationToken)
     {
+        if (!TryGetCurrentUserId(out var currentUserId))
+        {
+            return Forbid();
+        }
+        var isAdmin = User.IsInRole("Admin");
+        if (request.UserId is not null && request.UserId != currentUserId && !isAdmin)
+        {
+            return Forbid();
+        }
+
         var payment = await _dbContext.PremiumPayments
             .SingleOrDefaultAsync(
                 item => item.OrderCode == orderCode &&
+                    (isAdmin || item.UserId == currentUserId) &&
                     (request.UserId == null || item.UserId == request.UserId.Value),
                 cancellationToken);
 
@@ -364,6 +396,7 @@ public sealed class PremiumController : ControllerBase
     }
 
     [HttpPost("payos/webhook")]
+    [AllowAnonymous]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> HandlePayOsWebhook(
@@ -411,6 +444,7 @@ public sealed class PremiumController : ControllerBase
     }
 
     [HttpPost("payos/confirm-webhook")]
+    [Authorize(Roles = "Admin")]
     [ProducesResponseType(typeof(PayOsWebhookConfirmationResult), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status503ServiceUnavailable)]
@@ -440,53 +474,38 @@ public sealed class PremiumController : ControllerBase
         }
     }
 
-    private async Task<User> ResolveUserAsync(
-        int? userId,
-        string? email,
-        string? fullName,
-        CancellationToken cancellationToken)
+    private bool TryGetCurrentUserId(out int userId)
     {
-        if (userId is not null)
-        {
-            var existingUser = await _dbContext.Users
-                .SingleOrDefaultAsync(user => user.UserId == userId.Value, cancellationToken);
-
-            if (existingUser is not null)
-            {
-                return existingUser;
-            }
-        }
-
-        return await EnsureUserAsync(email, fullName, cancellationToken);
+        return int.TryParse(
+            User.FindFirstValue("UserId") ?? User.FindFirstValue(ClaimTypes.NameIdentifier),
+            out userId);
     }
 
-    private async Task<User> EnsureUserAsync(
-        string? email,
-        string? fullName,
-        CancellationToken cancellationToken)
+    private bool CanAccessUser(int userId)
     {
-        var normalizedEmail = NormalizeEmail(email);
-        var user = await _dbContext.Users
-            .SingleOrDefaultAsync(item => item.Email == normalizedEmail, cancellationToken);
+        return TryGetCurrentUserId(out var currentUserId) &&
+            (currentUserId == userId || User.IsInRole("Admin"));
+    }
 
-        if (user is not null)
+    private bool TryResolveRequestedUserId(int? requestedUserId, out int targetUserId)
+    {
+        targetUserId = 0;
+        if (!TryGetCurrentUserId(out var currentUserId))
         {
-            return user;
+            return false;
         }
-
-        var now = DateTime.UtcNow;
-        user = new User
+        if (requestedUserId is not null && requestedUserId != currentUserId && !User.IsInRole("Admin"))
         {
-            Email = normalizedEmail,
-            FullName = string.IsNullOrWhiteSpace(fullName) ? "SmartSteps Parent" : fullName.Trim(),
-            Password = $"mvp-premium-{Guid.NewGuid():N}",
-            Role = "Parent",
-            CreatedAt = now
-        };
+            return false;
+        }
+        targetUserId = requestedUserId ?? currentUserId;
+        return true;
+    }
 
-        _dbContext.Users.Add(user);
-        await _dbContext.SaveChangesAsync(cancellationToken);
-        return user;
+    private static bool EmailMatchesUser(string? requestedEmail, User user)
+    {
+        return string.IsNullOrWhiteSpace(requestedEmail) ||
+            string.Equals(requestedEmail.Trim(), user.Email, StringComparison.OrdinalIgnoreCase);
     }
 
     private async Task<PremiumStatusResponse> BuildStatusResponseAsync(
@@ -668,18 +687,6 @@ public sealed class PremiumController : ControllerBase
     private bool CanUseMockPayments()
     {
         return _environment.IsDevelopment() && _payOsOptions.AllowMockPaymentsWhenUnconfigured;
-    }
-
-    private static string NormalizeEmail(string? email)
-    {
-        var normalizedEmail = email?.Trim().ToLowerInvariant();
-        if (string.IsNullOrWhiteSpace(normalizedEmail) ||
-            !new EmailAddressAttribute().IsValid(normalizedEmail))
-        {
-            throw new BadHttpRequestException("A valid email is required for the premium account.");
-        }
-
-        return normalizedEmail;
     }
 
     private static string NormalizeCode(string? code)

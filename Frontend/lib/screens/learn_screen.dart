@@ -112,7 +112,8 @@ class _ParentReportPageState extends State<ParentReportPage> {
       String? analysisError;
       try {
         final learningService = LearningService();
-        analysis = await learningService.generateReport();
+        analysis = force ? null : await learningService.getLatestReport();
+        analysis ??= await learningService.generateReport();
         if (!analysis.hasEnoughData) {
           final locallyCompletedSituationIds = entries
               .where((entry) => entry.points > 0)
@@ -127,6 +128,9 @@ class _ParentReportPageState extends State<ParentReportPage> {
         }
         if (!analysis.hasEnoughData) {
           analysisError = analysis.message;
+        } else {
+          final recommendations = await learningService.getRecommendations();
+          analysis = analysis.copyWithRecommendations(recommendations);
         }
       } catch (error) {
         debugPrint('SmartSteps learning analysis failed: $error');
@@ -221,6 +225,41 @@ class _ParentReportPageState extends State<ParentReportPage> {
           });
 
     return entries;
+  }
+
+  Future<void> _requestReview(_ParentReportEntry entry) async {
+    try {
+      await LearningService().requestReview(entry.situationId);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Đã thêm bài vào danh sách ôn tập.')),
+        );
+        await _loadReport(force: true);
+      }
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('$error')));
+      }
+    }
+  }
+
+  Future<void> _dismissRecommendation(_ParentReportEntry entry) async {
+    if (entry.recommendationId == null) return;
+    try {
+      await LearningService().updateRecommendation(
+        entry.recommendationId!,
+        'Dismissed',
+      );
+      if (mounted) await _loadReport(force: true);
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('$error')));
+      }
+    }
   }
 
   @override
@@ -327,6 +366,8 @@ class _ParentReportPageState extends State<ParentReportPage> {
                                               entries: displayEntries,
                                               onStartLesson:
                                                   widget.onStartLesson,
+                                              onRequestReview: _requestReview,
+                                              onDismiss: _dismissRecommendation,
                                             ),
                                           ],
                                         ),
@@ -900,11 +941,15 @@ class _NextLessonSuggestionCard extends StatelessWidget {
     required this.focusEntry,
     required this.entries,
     required this.onStartLesson,
+    required this.onRequestReview,
+    required this.onDismiss,
   });
 
   final _ParentReportEntry focusEntry;
   final List<_ParentReportEntry> entries;
   final void Function(int situationId, int islandId)? onStartLesson;
+  final ValueChanged<_ParentReportEntry> onRequestReview;
+  final ValueChanged<_ParentReportEntry> onDismiss;
 
   @override
   Widget build(BuildContext context) {
@@ -929,6 +974,21 @@ class _NextLessonSuggestionCard extends StatelessWidget {
                 Text(
                   nextEntry.lessonTitle,
                   style: Theme.of(context).textTheme.titleLarge,
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    TextButton.icon(
+                      onPressed: () => onRequestReview(nextEntry),
+                      icon: const Icon(Icons.replay_rounded),
+                      label: const Text('Thêm ôn tập'),
+                    ),
+                    if (nextEntry.recommendationId != null)
+                      TextButton(
+                        onPressed: () => onDismiss(nextEntry),
+                        child: const Text('Bỏ qua'),
+                      ),
+                  ],
                 ),
                 const SizedBox(height: 9),
                 Text(
@@ -1104,6 +1164,7 @@ class _ParentReportEntry {
     this.recommendationReason,
     this.recommendationType,
     this.recommendationPriority = 0,
+    this.recommendationId,
   });
 
   factory _ParentReportEntry.fromDetail(SituationDetail detail) {
@@ -1167,6 +1228,7 @@ class _ParentReportEntry {
       recommendationReason: recommendationReason,
       recommendationType: recommendationType,
       recommendationPriority: recommendationPriority,
+      recommendationId: recommendationId,
     );
   }
 
@@ -1203,6 +1265,7 @@ class _ParentReportEntry {
           recommendation?.recommendationType ?? recommendationType,
       recommendationPriority:
           recommendation?.priority ?? recommendationPriority,
+      recommendationId: recommendation?.recommendationId ?? recommendationId,
     );
   }
 
@@ -1224,6 +1287,7 @@ class _ParentReportEntry {
   final String? recommendationReason;
   final String? recommendationType;
   final int recommendationPriority;
+  final int? recommendationId;
 }
 
 List<_ParentReportEntry> _applyLearningAnalysis(

@@ -10,11 +10,13 @@ import 'package:smartsteps/models/child_profile.dart';
 import 'package:smartsteps/models/situation.dart';
 import 'package:smartsteps/services/situation_service.dart';
 import 'package:video_player/video_player.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../services/supabase_config.dart';
 import '../services/app_audio_controller.dart';
 import '../services/local_profile_storage.dart';
 import '../services/learning_service.dart';
+import '../services/premium_service.dart';
 import '../services/registration_avatar_service.dart';
 import '../services/analytics_service.dart';
 import '../theme/duo_theme.dart';
@@ -779,6 +781,8 @@ class _SmartStepsCatalogPageState extends State<SmartStepsCatalogPage>
   int? _loadingSituationId;
   String? _catalogError;
   ChildProfile? _profile;
+  Set<int> _serverCompletedSituationIds = const {};
+  Map<int, int> _serverCurrentSteps = const {};
   bool _isFeedbackPromptOpen = false;
 
   SituationService get _situationService => widget.situationService;
@@ -863,13 +867,37 @@ class _SmartStepsCatalogPageState extends State<SmartStepsCatalogPage>
   }
 
   Future<void> _loadProfile() async {
-    final profile = await widget.profileStorage.readProfile();
+    var profile = await widget.profileStorage.readProfile();
+    Set<int> completed = const {};
+    Map<int, int> currentSteps = const {};
+    try {
+      final progressFuture = LearningService().getProgress();
+      final premiumFuture = PremiumService().getStatus();
+      final progress = await progressFuture;
+      final premium = await premiumFuture;
+      completed = progress.completedSituationIds;
+      currentSteps = <int, int>{
+        for (final item in progress.items) item.situationId: item.currentStep,
+      };
+      if (profile != null && profile.isPremium != premium.hasPremium) {
+        profile = profile.copyWith(
+          isPremium: premium.hasPremium,
+          premiumCode: premium.planCode,
+          premiumActivatedAt: premium.hasPremium ? DateTime.now() : null,
+        );
+        await widget.profileStorage.saveProfile(profile);
+      }
+    } catch (error) {
+      debugPrint('SmartSteps account state sync failed: $error');
+    }
     if (!mounted) {
       return;
     }
 
     setState(() {
       _profile = profile;
+      _serverCompletedSituationIds = completed;
+      _serverCurrentSteps = currentSteps;
     });
   }
 
@@ -1121,6 +1149,7 @@ class _SmartStepsCatalogPageState extends State<SmartStepsCatalogPage>
       MaterialPageRoute<void>(
         builder: (_) => LessonGameScreen(
           lesson: lesson,
+          initialStepId: _serverCurrentSteps[lesson.situationId],
           profileStorage: widget.profileStorage,
           isLastLesson: isLastLesson,
           onLessonCompleted: (profile) {
@@ -1179,12 +1208,14 @@ class _SmartStepsCatalogPageState extends State<SmartStepsCatalogPage>
         !_isLoadingCatalog &&
         !_isLoadingIslandSituations &&
         _loadingSituationId == null;
-    final completedSituationIds =
-        _profile?.skillProgress
-            .where((p) => p.points > 0)
-            .map((p) => p.situationId)
-            .toSet() ??
-        const <int>{};
+    final completedSituationIds = <int>{
+      ..._serverCompletedSituationIds,
+      ...(_profile?.skillProgress
+              .where((p) => p.points > 0)
+              .map((p) => p.situationId)
+              .toSet() ??
+          const <int>{}),
+    };
 
     return Scaffold(
       body: IndexedStack(
@@ -1678,8 +1709,21 @@ class _PremiumOfferDialogState extends State<_PremiumOfferDialog> {
     }
 
     try {
-      // 2. Activate Premium directly with default code
-      final profile = await widget.profileStorage.activatePremium('PREMIUM');
+      // Redeem on the authenticated account first, then refresh local UI state.
+      final status = await PremiumService().redeemCode('PREMIUM');
+      if (!status.hasPremium) {
+        throw const PremiumServiceException('Máy chủ chưa kích hoạt Premium.');
+      }
+      final current = await widget.profileStorage.readProfile();
+      if (current == null) {
+        throw const PremiumServiceException('Bạn cần hoàn tất hồ sơ trước.');
+      }
+      final profile = current.copyWith(
+        isPremium: true,
+        premiumCode: status.planCode ?? 'PREMIUM',
+        premiumActivatedAt: DateTime.now(),
+      );
+      await widget.profileStorage.saveProfile(profile);
       if (!mounted) {
         return;
       }
@@ -1692,7 +1736,7 @@ class _PremiumOfferDialogState extends State<_PremiumOfferDialog> {
         _isSubmitting = false;
         _showSuccess = true;
       });
-    } on PremiumActivationException catch (error) {
+    } on PremiumServiceException catch (error) {
       if (!mounted) {
         return;
       }
@@ -1712,6 +1756,55 @@ class _PremiumOfferDialogState extends State<_PremiumOfferDialog> {
         _errorText = 'Chưa nâng cấp được Premium. Vui lòng thử lại.';
         _isSubmitting = false;
       });
+    }
+  }
+
+  Future<void> _purchasePremium() async {
+    if (_isSubmitting || _showSuccess) return;
+    setState(() {
+      _isSubmitting = true;
+      _errorText = null;
+    });
+    try {
+      final service = PremiumService();
+      final payment = await service.createPayment('PRO_MONTHLY');
+      if (payment.checkoutUrl.isNotEmpty) {
+        await launchUrl(
+          Uri.parse(payment.checkoutUrl),
+          mode: LaunchMode.externalApplication,
+        );
+      }
+      final status = await service.confirmPayment(payment.orderCode);
+      if (status.hasPremium) {
+        final current = await widget.profileStorage.readProfile();
+        if (current != null) {
+          final profile = current.copyWith(
+            isPremium: true,
+            premiumCode: status.planCode,
+            premiumActivatedAt: DateTime.now(),
+          );
+          await widget.profileStorage.saveProfile(profile);
+          widget.onPremiumActivated(profile);
+        }
+        if (mounted) {
+          setState(() {
+            _showSuccess = true;
+            _isSubmitting = false;
+          });
+        }
+      } else if (mounted) {
+        setState(() {
+          _isSubmitting = false;
+          _errorText = 'Hãy hoàn tất thanh toán rồi thử lại.';
+        });
+      }
+    } catch (error) {
+      if (mounted) {
+        setState(() {
+          _isSubmitting = false;
+          _errorText = 'Không tạo được thanh toán: $error';
+        });
+      }
     }
   }
 
@@ -1865,6 +1958,15 @@ class _PremiumOfferDialogState extends State<_PremiumOfferDialog> {
                 fontWeight: FontWeight.w900,
               ),
             ),
+          ),
+        ),
+        const SizedBox(height: 10),
+        OutlinedButton.icon(
+          onPressed: _isSubmitting ? null : _purchasePremium,
+          icon: const Icon(Icons.qr_code_rounded),
+          label: const Text('Thanh toán gói 1 tháng'),
+          style: OutlinedButton.styleFrom(
+            minimumSize: const Size(double.infinity, 52),
           ),
         ),
       ],

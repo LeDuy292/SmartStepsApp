@@ -25,7 +25,7 @@ public class RegisterRequest
     public string Password { get; set; } = null!;
 
     [Required]
-    [RegularExpression("^(Child|Parent|Admin|ContentCreator)$")]
+    [RegularExpression("^(Child|Parent)$")]
     public string Role { get; set; } = null!;
 }
 

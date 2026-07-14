@@ -29,6 +29,7 @@ public class SmartStepsDbContext : DbContext
     public DbSet<LessonRecommendation> LessonRecommendations { get; set; } = null!;
     public DbSet<SkillAssessment> SkillAssessments { get; set; } = null!;
     public DbSet<AIAnalysisLog> AIAnalysisLogs { get; set; } = null!;
+    public DbSet<AppFeedback> AppFeedbackEntries { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -48,6 +49,7 @@ public class SmartStepsDbContext : DbContext
             entity.HasIndex(e => e.Email).IsUnique();
             entity.Property(e => e.Password).HasColumnType("varchar(255)").HasMaxLength(255).IsRequired();
             entity.Property(e => e.Role).HasColumnType("varchar(30)").HasMaxLength(30).IsRequired();
+            entity.Property(e => e.ProfileJson).HasColumnType("text");
             ConfigureAuditColumns(entity);
 
             entity.HasOne(e => e.Parent)
@@ -69,6 +71,26 @@ public class SmartStepsDbContext : DbContext
                 .WithOne(e => e.User)
                 .HasForeignKey(e => e.UserId)
                 .OnDelete(DeleteBehavior.NoAction);
+        });
+
+        modelBuilder.Entity<AppFeedback>(entity =>
+        {
+            entity.ToTable("AppFeedback", table =>
+            {
+                table.HasCheckConstraint("CK_AppFeedback_ExperienceRating", "\"ExperienceRating\" BETWEEN 1 AND 5");
+                table.HasCheckConstraint("CK_AppFeedback_ChildEngagementRating", "\"ChildEngagementRating\" BETWEEN 1 AND 5");
+                table.HasCheckConstraint("CK_AppFeedback_EffectivenessRating", "\"EffectivenessRating\" BETWEEN 1 AND 5");
+            });
+            entity.HasKey(e => e.FeedbackId);
+            entity.HasIndex(e => new { e.UserId, e.ClientId }).IsUnique();
+            entity.Property(e => e.ClientId).HasMaxLength(100).IsRequired();
+            entity.Property(e => e.Source).HasMaxLength(50).IsRequired();
+            entity.Property(e => e.AgeFit).HasMaxLength(50).IsRequired();
+            entity.Property(e => e.ImprovementNote).HasMaxLength(2000).IsRequired();
+            entity.HasOne(e => e.User)
+                .WithMany(e => e.AppFeedbackEntries)
+                .HasForeignKey(e => e.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
 
         // Configure Island

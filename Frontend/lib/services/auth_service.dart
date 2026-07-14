@@ -65,7 +65,8 @@ class AuthService {
       );
 
       if (response.statusCode == 200) {
-        return login(email, password);
+        final loginError = await login(email, password);
+        return loginError == null;
       }
       throw AuthServiceException(_registrationError(response));
     } catch (e) {
@@ -95,7 +96,7 @@ class AuthService {
     return 'Đăng ký thất bại (mã ${response.statusCode}). Vui lòng kiểm tra lại thông tin.';
   }
 
-  Future<bool> login(String email, String password) async {
+  Future<String?> login(String email, String password) async {
     try {
       final response = await http.post(
         Uri.parse('$baseUrl/login'),
@@ -107,7 +108,7 @@ class AuthService {
       if (response.statusCode == 200) {
         await _saveToken(data['token']);
         await _restoreBasicChildProfileIfMissing(data);
-        return true;
+        return null;
       }
       return data['message'] ?? 'Đăng nhập thất bại.';
     } catch (e) {
@@ -143,7 +144,7 @@ class AuthService {
       if (response.statusCode == 200) {
         await _saveToken(data['token']);
         await _restoreBasicChildProfileIfMissing(data);
-        return true;
+        return null;
       }
       return data['message'] ?? 'Đăng nhập Google thất bại.';
     } catch (e) {

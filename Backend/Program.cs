@@ -13,6 +13,11 @@ UseLocalDatabaseHostOutsideContainer();
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Console logging works consistently in local development, containers and
+// Railway. The Windows Event Log provider can fail for non-admin users.
+builder.Logging.ClearProviders();
+builder.Logging.AddConsole();
+
 const string AllowReactApp = "_allowReactApp";
 var port = builder.Configuration["PORT"];
 
