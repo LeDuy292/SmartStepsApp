@@ -30,6 +30,12 @@ public class User
     [Column(TypeName = "varchar(30)")]
     public string Role { get; set; } = null!; // Child, Parent, Admin, ContentCreator
 
+    [Required]
+    [StringLength(20)]
+    [RegularExpression("^(Active|Locked|Inactive)$")]
+    [Column(TypeName = "varchar(20)")]
+    public string Status { get; set; } = "Active";
+
     public int? ParentId { get; set; }
 
     public string? ProfileJson { get; set; }

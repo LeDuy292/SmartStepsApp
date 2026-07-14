@@ -54,6 +54,7 @@ public class AuthController : ControllerBase
             Email = normalizedEmail,
             Password = BCrypt.Net.BCrypt.HashPassword(request.Password),
             Role = publicRole,
+            Status = "Active",
             CreatedAt = DateTime.UtcNow
         };
 
@@ -73,6 +74,11 @@ public class AuthController : ControllerBase
         if (user == null || !BCrypt.Net.BCrypt.Verify(request.Password, user.Password))
         {
             return Unauthorized(new { Message = "Invalid email or password." });
+        }
+
+        if (user.Status != "Active")
+        {
+            return Unauthorized(new { Message = "Tài khoản của bạn đã bị khóa hoặc ngừng hoạt động." });
         }
 
         var token = GenerateJwtToken(user);
@@ -118,11 +124,17 @@ public class AuthController : ControllerBase
                     Email = payload.Email,
                     Password = BCrypt.Net.BCrypt.HashPassword(Guid.NewGuid().ToString()), // Random password for google users
                     Role = publicRole,
+                    Status = "Active",
                     CreatedAt = DateTime.UtcNow
                 };
 
                 _context.Users.Add(user);
                 await _context.SaveChangesAsync();
+            }
+            else if (user.Status != "Active")
+            {
+                Console.WriteLine($"GoogleLogin failed: user.Status is {user.Status} for email {user.Email}");
+                return Unauthorized(new { Message = "Tài khoản của bạn đã bị khóa hoặc ngừng hoạt động." });
             }
 
             var token = GenerateJwtToken(user);
@@ -136,9 +148,15 @@ public class AuthController : ControllerBase
                 Role = user.Role
             });
         }
-        catch (InvalidJwtException)
+        catch (InvalidJwtException ex)
         {
+            Console.WriteLine($"GoogleLogin failed: InvalidJwtException - {ex.Message}");
             return Unauthorized(new { Message = "Invalid Google token." });
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"GoogleLogin failed: Exception - {ex.Message}");
+            return StatusCode(500, new { Message = "Internal server error." });
         }
     }
 
@@ -149,6 +167,11 @@ public class AuthController : ControllerBase
         if (user == null)
         {
             return Ok(new { Message = "If the email is registered, a new password will be sent." });
+        }
+
+        if (user.Status != "Active")
+        {
+            return BadRequest(new { Message = "Tài khoản của bạn đã bị khóa hoặc ngừng hoạt động." });
         }
 
         var newPassword = Guid.NewGuid().ToString().Substring(0, 8);

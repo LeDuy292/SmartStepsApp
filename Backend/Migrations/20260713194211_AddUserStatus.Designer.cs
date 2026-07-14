@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using SmartStepsServer.Data;
@@ -11,9 +12,11 @@ using SmartStepsServer.Data;
 namespace SmartStepsServer.Migrations
 {
     [DbContext(typeof(SmartStepsDbContext))]
-    partial class SmartStepsDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260713194211_AddUserStatus")]
+    partial class AddUserStatus
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -21,116 +24,6 @@ namespace SmartStepsServer.Migrations
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
-
-            modelBuilder.Entity("SmartStepsServer.Data.Models.AIAnalysisLog", b =>
-                {
-                    b.Property<int>("AnalysisId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("AnalysisId"));
-
-                    b.Property<int>("ChildId")
-                        .HasColumnType("integer");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("ErrorMessage")
-                        .HasColumnType("text");
-
-                    b.Property<string>("ModelName")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("varchar(100)");
-
-                    b.Property<int?>("ReportId")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("RequestData")
-                        .IsRequired()
-                        .HasColumnType("jsonb");
-
-                    b.Property<string>("ResponseData")
-                        .HasColumnType("jsonb");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasMaxLength(30)
-                        .HasColumnType("varchar(30)");
-
-                    b.HasKey("AnalysisId");
-
-                    b.HasIndex("ReportId");
-
-                    b.HasIndex("ChildId", "CreatedAt");
-
-                    b.ToTable("AIAnalysisLog", null, t =>
-                        {
-                            t.HasCheckConstraint("CK_AIAnalysisLog_Status", "\"Status\" IN ('Succeeded', 'Fallback', 'Failed', 'Skipped')");
-                        });
-                });
-
-            modelBuilder.Entity("SmartStepsServer.Data.Models.AppFeedback", b =>
-                {
-                    b.Property<int>("FeedbackId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("FeedbackId"));
-
-                    b.Property<string>("AgeFit")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
-
-                    b.Property<int>("ChildEngagementRating")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("ClientId")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<int>("EffectivenessRating")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("ExperienceRating")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("ImprovementNote")
-                        .IsRequired()
-                        .HasMaxLength(2000)
-                        .HasColumnType("character varying(2000)");
-
-                    b.Property<string>("Source")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
-
-                    b.Property<DateTime>("SubmittedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<int>("UserId")
-                        .HasColumnType("integer");
-
-                    b.HasKey("FeedbackId");
-
-                    b.HasIndex("UserId", "ClientId")
-                        .IsUnique();
-
-                    b.ToTable("AppFeedback", null, t =>
-                        {
-                            t.HasCheckConstraint("CK_AppFeedback_ChildEngagementRating", "\"ChildEngagementRating\" BETWEEN 1 AND 5");
-
-                            t.HasCheckConstraint("CK_AppFeedback_EffectivenessRating", "\"EffectivenessRating\" BETWEEN 1 AND 5");
-
-                            t.HasCheckConstraint("CK_AppFeedback_ExperienceRating", "\"ExperienceRating\" BETWEEN 1 AND 5");
-                        });
-                });
 
             modelBuilder.Entity("SmartStepsServer.Data.Models.Flashcard", b =>
                 {
@@ -383,117 +276,6 @@ namespace SmartStepsServer.Migrations
                             Name = "Social Safety",
                             OrderIndex = 3,
                             Status = "Active"
-                        });
-                });
-
-            modelBuilder.Entity("SmartStepsServer.Data.Models.LearningReport", b =>
-                {
-                    b.Property<int>("ReportId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("ReportId"));
-
-                    b.Property<string>("AreasForImprovement")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<int>("ChildId")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("CompletedLessons")
-                        .HasColumnType("integer");
-
-                    b.Property<decimal>("CorrectRate")
-                        .HasPrecision(5, 4)
-                        .HasColumnType("numeric(5,4)");
-
-                    b.Property<DateTime>("GeneratedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("ParentAdvice")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<DateTime>("PeriodFrom")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<DateTime>("PeriodTo")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("Strengths")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("Summary")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<int>("TotalLessons")
-                        .HasColumnType("integer");
-
-                    b.HasKey("ReportId");
-
-                    b.HasIndex("ChildId", "PeriodFrom", "PeriodTo");
-
-                    b.ToTable("LearningReport", null, t =>
-                        {
-                            t.HasCheckConstraint("CK_LearningReport_CorrectRate", "\"CorrectRate\" >= 0 AND \"CorrectRate\" <= 1");
-
-                            t.HasCheckConstraint("CK_LearningReport_Period", "\"PeriodTo\" >= \"PeriodFrom\"");
-                        });
-                });
-
-            modelBuilder.Entity("SmartStepsServer.Data.Models.LessonRecommendation", b =>
-                {
-                    b.Property<int>("RecommendationId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("RecommendationId"));
-
-                    b.Property<int>("ChildId")
-                        .HasColumnType("integer");
-
-                    b.Property<DateTime?>("CompletedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<int>("Priority")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("Reason")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("RecommendationType")
-                        .IsRequired()
-                        .HasMaxLength(30)
-                        .HasColumnType("varchar(30)");
-
-                    b.Property<int>("SituationId")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasMaxLength(30)
-                        .HasColumnType("varchar(30)");
-
-                    b.HasKey("RecommendationId");
-
-                    b.HasIndex("SituationId");
-
-                    b.HasIndex("ChildId", "Status", "Priority");
-
-                    b.ToTable("LessonRecommendation", null, t =>
-                        {
-                            t.HasCheckConstraint("CK_LessonRecommendation_Priority", "\"Priority\" >= 0 AND \"Priority\" <= 100");
-
-                            t.HasCheckConstraint("CK_LessonRecommendation_Status", "\"Status\" IN ('Pending', 'Completed', 'Dismissed')");
-
-                            t.HasCheckConstraint("CK_LessonRecommendation_Type", "\"RecommendationType\" IN ('NextLesson', 'Review', 'WeakSkill', 'PeriodicReview')");
                         });
                 });
 
@@ -1476,53 +1258,6 @@ namespace SmartStepsServer.Migrations
                         });
                 });
 
-            modelBuilder.Entity("SmartStepsServer.Data.Models.SkillAssessment", b =>
-                {
-                    b.Property<int>("AssessmentId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("AssessmentId"));
-
-                    b.Property<int>("ChildId")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("CorrectAttempts")
-                        .HasColumnType("integer");
-
-                    b.Property<decimal>("CorrectRate")
-                        .HasPrecision(5, 4)
-                        .HasColumnType("numeric(5,4)");
-
-                    b.Property<DateTime>("LastAssessedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("MasteryLevel")
-                        .IsRequired()
-                        .HasMaxLength(30)
-                        .HasColumnType("varchar(30)");
-
-                    b.Property<int>("SkillId")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("TotalAttempts")
-                        .HasColumnType("integer");
-
-                    b.HasKey("AssessmentId");
-
-                    b.HasIndex("SkillId");
-
-                    b.HasIndex("ChildId", "SkillId")
-                        .IsUnique();
-
-                    b.ToTable("SkillAssessment", null, t =>
-                        {
-                            t.HasCheckConstraint("CK_SkillAssessment_CorrectRate", "\"CorrectRate\" >= 0 AND \"CorrectRate\" <= 1");
-
-                            t.HasCheckConstraint("CK_SkillAssessment_MasteryLevel", "\"MasteryLevel\" IN ('NotAchieved', 'NeedsReview', 'Achieved', 'Mastered')");
-                        });
-                });
-
             modelBuilder.Entity("SmartStepsServer.Data.Models.User", b =>
                 {
                     b.Property<int>("UserId")
@@ -1553,9 +1288,6 @@ namespace SmartStepsServer.Migrations
                         .IsRequired()
                         .HasMaxLength(255)
                         .HasColumnType("varchar(255)");
-
-                    b.Property<string>("ProfileJson")
-                        .HasColumnType("text");
 
                     b.Property<string>("Role")
                         .IsRequired()
@@ -1686,35 +1418,6 @@ namespace SmartStepsServer.Migrations
                         });
                 });
 
-            modelBuilder.Entity("SmartStepsServer.Data.Models.AIAnalysisLog", b =>
-                {
-                    b.HasOne("SmartStepsServer.Data.Models.User", "Child")
-                        .WithMany("AIAnalysisLogs")
-                        .HasForeignKey("ChildId")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .IsRequired();
-
-                    b.HasOne("SmartStepsServer.Data.Models.LearningReport", "Report")
-                        .WithMany("AIAnalysisLogs")
-                        .HasForeignKey("ReportId")
-                        .OnDelete(DeleteBehavior.NoAction);
-
-                    b.Navigation("Child");
-
-                    b.Navigation("Report");
-                });
-
-            modelBuilder.Entity("SmartStepsServer.Data.Models.AppFeedback", b =>
-                {
-                    b.HasOne("SmartStepsServer.Data.Models.User", "User")
-                        .WithMany("AppFeedbackEntries")
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .IsRequired();
-
-                    b.Navigation("User");
-                });
-
             modelBuilder.Entity("SmartStepsServer.Data.Models.Flashcard", b =>
                 {
                     b.HasOne("SmartStepsServer.Data.Models.Situation", "Situation")
@@ -1722,36 +1425,6 @@ namespace SmartStepsServer.Migrations
                         .HasForeignKey("SituationId")
                         .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
-
-                    b.Navigation("Situation");
-                });
-
-            modelBuilder.Entity("SmartStepsServer.Data.Models.LearningReport", b =>
-                {
-                    b.HasOne("SmartStepsServer.Data.Models.User", "Child")
-                        .WithMany("LearningReports")
-                        .HasForeignKey("ChildId")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .IsRequired();
-
-                    b.Navigation("Child");
-                });
-
-            modelBuilder.Entity("SmartStepsServer.Data.Models.LessonRecommendation", b =>
-                {
-                    b.HasOne("SmartStepsServer.Data.Models.User", "Child")
-                        .WithMany("LessonRecommendations")
-                        .HasForeignKey("ChildId")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .IsRequired();
-
-                    b.HasOne("SmartStepsServer.Data.Models.Situation", "Situation")
-                        .WithMany("LessonRecommendations")
-                        .HasForeignKey("SituationId")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .IsRequired();
-
-                    b.Navigation("Child");
 
                     b.Navigation("Situation");
                 });
@@ -1864,25 +1537,6 @@ namespace SmartStepsServer.Migrations
                     b.Navigation("Situation");
                 });
 
-            modelBuilder.Entity("SmartStepsServer.Data.Models.SkillAssessment", b =>
-                {
-                    b.HasOne("SmartStepsServer.Data.Models.User", "Child")
-                        .WithMany("SkillAssessments")
-                        .HasForeignKey("ChildId")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .IsRequired();
-
-                    b.HasOne("SmartStepsServer.Data.Models.Skill", "Skill")
-                        .WithMany("SkillAssessments")
-                        .HasForeignKey("SkillId")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .IsRequired();
-
-                    b.Navigation("Child");
-
-                    b.Navigation("Skill");
-                });
-
             modelBuilder.Entity("SmartStepsServer.Data.Models.User", b =>
                 {
                     b.HasOne("SmartStepsServer.Data.Models.User", "Parent")
@@ -1959,11 +1613,6 @@ namespace SmartStepsServer.Migrations
                     b.Navigation("UserProgresses");
                 });
 
-            modelBuilder.Entity("SmartStepsServer.Data.Models.LearningReport", b =>
-                {
-                    b.Navigation("AIAnalysisLogs");
-                });
-
             modelBuilder.Entity("SmartStepsServer.Data.Models.PremiumPayment", b =>
                 {
                     b.Navigation("PremiumSubscriptions");
@@ -1977,8 +1626,6 @@ namespace SmartStepsServer.Migrations
             modelBuilder.Entity("SmartStepsServer.Data.Models.Situation", b =>
                 {
                     b.Navigation("Flashcards");
-
-                    b.Navigation("LessonRecommendations");
 
                     b.Navigation("ParentReviewQuestions");
 
@@ -1999,29 +1646,17 @@ namespace SmartStepsServer.Migrations
                     b.Navigation("ParentReviewQuestions");
 
                     b.Navigation("SituationSkills");
-
-                    b.Navigation("SkillAssessments");
                 });
 
             modelBuilder.Entity("SmartStepsServer.Data.Models.User", b =>
                 {
-                    b.Navigation("AIAnalysisLogs");
-
-                    b.Navigation("AppFeedbackEntries");
-
                     b.Navigation("Children");
-
-                    b.Navigation("LearningReports");
-
-                    b.Navigation("LessonRecommendations");
 
                     b.Navigation("PremiumCodeRedemptions");
 
                     b.Navigation("PremiumPayments");
 
                     b.Navigation("PremiumSubscriptions");
-
-                    b.Navigation("SkillAssessments");
 
                     b.Navigation("UserAnswers");
 

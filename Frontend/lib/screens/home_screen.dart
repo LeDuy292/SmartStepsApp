@@ -24,6 +24,7 @@ import '../utils/platform_environment.dart';
 import '../widgets/duo_components.dart';
 import '../widgets/smartsteps_press_effect.dart';
 import '../services/auth_service.dart';
+import '../view_models/registration_view_model.dart';
 import 'app_feedback_dialog.dart';
 import 'learn_screen.dart';
 import 'login_screen.dart';
@@ -700,6 +701,10 @@ class _SmartStepsAppState extends State<SmartStepsApp> {
       MaterialPageRoute<void>(
         builder: (registrationContext) => RegisterScreen(
           profileStorage: widget.profileStorage,
+          viewModel: RegistrationViewModel(
+            profileStorage: widget.profileStorage,
+            isSurveyOnly: true,
+          ),
           onRegistrationCompleted: (context) {
             _hasCompletedInitialSurvey = true;
             _openCatalog(Navigator.of(registrationContext));
