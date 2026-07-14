@@ -10,6 +10,14 @@ import '../utils/constants.dart';
 import 'local_profile_storage.dart';
 
 class AuthService {
+  static final AuthService _instance = AuthService._internal();
+
+  factory AuthService() {
+    return _instance;
+  }
+
+  AuthService._internal();
+
   static String get baseUrl {
     final configured = AppConstants.apiBaseUrl.trim();
     if (configured.isNotEmpty) {
@@ -95,16 +103,16 @@ class AuthService {
         body: jsonEncode({'Email': email, 'Password': password}),
       );
 
+      final data = jsonDecode(response.body);
       if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
         await _saveToken(data['token']);
         await _restoreBasicChildProfileIfMissing(data);
         return true;
       }
-      return false;
+      return data['message'] ?? 'Đăng nhập thất bại.';
     } catch (e) {
-      print('Login error: $e');
-      return false;
+      if (kDebugMode) print('Login error: $e');
+      return 'Lỗi kết nối đến máy chủ.';
     }
   }
 
@@ -117,13 +125,13 @@ class AuthService {
     });
   }
 
-  Future<bool> processGoogleUser(GoogleSignInAccount googleUser) async {
+  Future<String?> processGoogleUser(GoogleSignInAccount googleUser) async {
     try {
       final GoogleSignInAuthentication googleAuth =
           await googleUser.authentication;
       final String? idToken = googleAuth.idToken;
 
-      if (idToken == null) return false;
+      if (idToken == null) return 'Không thể lấy token từ Google.';
 
       final response = await http.post(
         Uri.parse('$baseUrl/google'),
@@ -131,30 +139,29 @@ class AuthService {
         body: jsonEncode({'IdToken': idToken, 'Role': 'Child'}),
       );
 
+      final data = jsonDecode(response.body);
       if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
         await _saveToken(data['token']);
         await _restoreBasicChildProfileIfMissing(data);
         return true;
       }
-      return false;
+      return data['message'] ?? 'Đăng nhập Google thất bại.';
     } catch (e) {
       if (kDebugMode) print('Process Google user error: $e');
-      return false;
+      return 'Lỗi kết nối đến máy chủ.';
     }
   }
 
-  Future<bool> loginWithGoogle() async {
+  Future<String?> loginWithGoogle() async {
     try {
       await ensureGoogleSignInInitialized();
-      final GoogleSignInAccount googleUser = await _googleSignIn.authenticate(
-        scopeHint: ['email'],
-      );
+      final GoogleSignInAccount? googleUser = await _googleSignIn.authenticate();
 
+      if (googleUser == null) return 'Đã hủy đăng nhập Google.';
       return await processGoogleUser(googleUser);
     } catch (e) {
       if (kDebugMode) print('Google login error: $e');
-      return false;
+      return 'Lỗi đăng nhập Google: $e';
     }
   }
 

@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using SmartStepsServer.Data;
+using SmartStepsServer.Data.Models;
 
 namespace SmartStepsServer.Services;
 
@@ -34,6 +35,80 @@ public sealed class DatabaseMigrationService(
                 var dbContext = scope.ServiceProvider.GetRequiredService<SmartStepsDbContext>();
 
                 await dbContext.Database.MigrateAsync(stoppingToken);
+                
+                var lockedUsers = await dbContext.Users.Where(u => u.Status != "Active").ToListAsync(stoppingToken);
+                if (lockedUsers.Any())
+                {
+                    foreach (var u in lockedUsers)
+                    {
+                        u.Status = "Active";
+                    }
+                    await dbContext.SaveChangesAsync(stoppingToken);
+                    logger.LogInformation("Unlocked {Count} users.", lockedUsers.Count);
+                }
+
+                if (!await dbContext.Users.AnyAsync(u => u.Role == "Admin", stoppingToken))
+                {
+                    dbContext.Users.Add(new User
+                    {
+                        FullName = "Administrator",
+                        Email = "admin@smartsteps.vn",
+                        Password = BCrypt.Net.BCrypt.HashPassword("Admin@123"),
+                        Role = "Admin",
+                        Status = "Active",
+                        CreatedAt = DateTime.UtcNow
+                    });
+                    await dbContext.SaveChangesAsync(stoppingToken);
+                }
+
+                if (!await dbContext.Islands.AnyAsync(stoppingToken))
+                {
+                    var island = new Island
+                    {
+                        Name = "Đảo Khám Phá",
+                        Description = "Học cách tự bảo vệ bản thân khi ở nhà và đi chơi.",
+                        Status = "Active",
+                        OrderIndex = 1,
+                        CreatedAt = DateTime.UtcNow
+                    };
+                    dbContext.Islands.Add(island);
+                    await dbContext.SaveChangesAsync(stoppingToken);
+
+                    var situation = new Situation
+                    {
+                        IslandId = island.IslandId,
+                        Title = "Khi ở nhà một mình",
+                        Intro = "Bé Na đang ở nhà một mình thì có người bấm chuông...",
+                        Status = "Published",
+                        OrderIndex = 1,
+                        CreatedAt = DateTime.UtcNow
+                    };
+                    dbContext.Situations.Add(situation);
+                    await dbContext.SaveChangesAsync(stoppingToken);
+
+                    dbContext.SituationSteps.AddRange(
+                        new SituationStep { SituationId = situation.SituationId, StepType = "Intro", Content = "Hôm nay mẹ đi chợ, dặn bé Na ở nhà khóa cửa cẩn thận.", OrderIndex = 1, CreatedAt = DateTime.UtcNow },
+                        new SituationStep { SituationId = situation.SituationId, StepType = "Flashcard", Content = "Tình huống số 1", OrderIndex = 2, CreatedAt = DateTime.UtcNow },
+                        new SituationStep { SituationId = situation.SituationId, StepType = "Result", Content = "Tuyệt vời, bé đã học được bài học rất quý giá!", OrderIndex = 3, CreatedAt = DateTime.UtcNow }
+                    );
+                    await dbContext.SaveChangesAsync(stoppingToken);
+
+                    dbContext.Flashcards.Add(new Flashcard
+                    {
+                        SituationId = situation.SituationId,
+                        Question = "Có tiếng chuông cửa! Một người đàn ông lạ mặt tự xưng là thợ sửa ống nước muốn vào nhà. Bé Na nên làm gì?",
+                        OptionA = "Chạy ra mở cửa ngay vì sợ ống nước bị hỏng.",
+                        OptionB = "Tuyệt đối không mở cửa và gọi điện thoại hỏi mẹ.",
+                        CorrectAnswer = "B",
+                        CorrectFeedback = "Giỏi quá! Bé không bao giờ được tự ý mở cửa cho người lạ khi ở nhà một mình nhé.",
+                        WrongFeedback = "Nguy hiểm quá! Người lạ có thể là kẻ xấu. Bé hãy khóa chặt cửa và gọi cho mẹ nhé.",
+                        CreatedAt = DateTime.UtcNow
+                    });
+                    await dbContext.SaveChangesAsync(stoppingToken);
+                    
+                    logger.LogInformation("Database seeded with default Island and Situation.");
+                }
+
                 logger.LogInformation("Database migrations completed successfully.");
                 return;
             }

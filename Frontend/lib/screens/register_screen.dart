@@ -142,6 +142,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         onNameChanged: _viewModel.updateName,
         onEmailChanged: _viewModel.updateEmail,
         onPasswordChanged: _viewModel.updatePassword,
+        isSurveyOnly: _viewModel.isSurveyOnly,
       ),
       RegistrationStep.age => RegistrationAgeStep(
         selectedAge: _viewModel.draft.age,

@@ -1,0 +1,110 @@
+import 'package:flutter/material.dart';
+
+import '../../services/auth_service.dart';
+import '../../theme/duo_theme.dart';
+import 'dashboard/admin_dashboard_view.dart';
+import 'users/user_list_view.dart';
+import 'content/island_list_view.dart';
+import 'content/situation_list_view.dart';
+import 'content/skill_list_view.dart';
+
+class AdminLayout extends StatefulWidget {
+  const AdminLayout({super.key});
+
+  @override
+  State<AdminLayout> createState() => _AdminLayoutState();
+}
+
+class _AdminLayoutState extends State<AdminLayout> {
+  int _selectedIndex = 0;
+
+  final List<Widget> _views = [
+    const AdminDashboardView(),
+    const UserListView(),
+    const IslandListView(),
+    const SituationListView(),
+    const SkillListView(),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: DuoColors.background,
+      body: Row(
+        children: [
+          NavigationRail(
+            backgroundColor: DuoColors.card,
+            selectedIndex: _selectedIndex,
+            onDestinationSelected: (int index) {
+              setState(() {
+                _selectedIndex = index;
+              });
+            },
+            extended: MediaQuery.of(context).size.width >= 800,
+            leading: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 20),
+              child: Image.asset(
+                'assets/images/logo.png', // Assuming there's a logo or use icon
+                width: 48,
+                height: 48,
+                errorBuilder: (context, error, stackTrace) =>
+                    const Icon(Icons.admin_panel_settings, size: 48, color: DuoColors.primaryYellow),
+              ),
+            ),
+            trailing: Expanded(
+              child: Align(
+                alignment: Alignment.bottomCenter,
+                child: Padding(
+                  padding: const EdgeInsets.only(bottom: 20),
+                  child: IconButton(
+                    icon: const Icon(Icons.logout, color: Colors.red),
+                    tooltip: 'Đăng xuất',
+                    onPressed: () async {
+                      await AuthService().logout();
+                      if (context.mounted) {
+                        // Assuming login screen will handle this when auth token is gone
+                        // or we can push directly to LoginScreen if imported
+                        Navigator.of(context).popUntil((route) => route.isFirst);
+                      }
+                    },
+                  ),
+                ),
+              ),
+            ),
+            destinations: const [
+              NavigationRailDestination(
+                icon: Icon(Icons.dashboard_outlined),
+                selectedIcon: Icon(Icons.dashboard),
+                label: Text('Tổng quan'),
+              ),
+              NavigationRailDestination(
+                icon: Icon(Icons.people_outline),
+                selectedIcon: Icon(Icons.people),
+                label: Text('Người dùng'),
+              ),
+              NavigationRailDestination(
+                icon: Icon(Icons.map_outlined),
+                selectedIcon: Icon(Icons.map),
+                label: Text('Nhóm bài học'),
+              ),
+              NavigationRailDestination(
+                icon: Icon(Icons.book_outlined),
+                selectedIcon: Icon(Icons.book),
+                label: Text('Bài học'),
+              ),
+              NavigationRailDestination(
+                icon: Icon(Icons.star_outline),
+                selectedIcon: Icon(Icons.star),
+                label: Text('Kỹ năng'),
+              ),
+            ],
+          ),
+          const VerticalDivider(thickness: 1, width: 1, color: DuoColors.border),
+          Expanded(
+            child: _views[_selectedIndex],
+          ),
+        ],
+      ),
+    );
+  }
+}
