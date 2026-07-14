@@ -29,15 +29,23 @@ public class AuthController : ControllerBase
     [HttpPost("register")]
     public async Task<IActionResult> Register([FromBody] RegisterRequest request)
     {
-        if (await _context.Users.AnyAsync(u => u.Email == request.Email))
+        var normalizedEmail = request.Email.Trim().ToLowerInvariant();
+        var existingUser = await _context.Users
+            .SingleOrDefaultAsync(user => user.Email.ToLower() == normalizedEmail);
+        if (existingUser is not null)
         {
+            if (BCrypt.Net.BCrypt.Verify(request.Password, existingUser.Password))
+            {
+                return Ok(new { Message = "Account already exists. Continue with login." });
+            }
+
             return BadRequest(new { Message = "Email is already in use." });
         }
 
         var user = new User
         {
             FullName = request.FullName,
-            Email = request.Email,
+            Email = normalizedEmail,
             Password = BCrypt.Net.BCrypt.HashPassword(request.Password),
             Role = request.Role,
             Status = "Active",
@@ -53,7 +61,9 @@ public class AuthController : ControllerBase
     [HttpPost("login")]
     public async Task<IActionResult> Login([FromBody] LoginRequest request)
     {
-        var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == request.Email);
+        var normalizedEmail = request.Email.Trim().ToLowerInvariant();
+        var user = await _context.Users
+            .FirstOrDefaultAsync(candidate => candidate.Email.ToLower() == normalizedEmail);
 
         if (user == null || !BCrypt.Net.BCrypt.Verify(request.Password, user.Password))
         {

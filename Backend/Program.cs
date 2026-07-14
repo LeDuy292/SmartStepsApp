@@ -29,10 +29,6 @@ if (!int.TryParse(port, out var parsedPort) || parsedPort is < 1 or > 65535)
 builder.WebHost.UseUrls($"http://+:{parsedPort}");
 
 var configuredOrigins = builder.Configuration["Cors:AllowedOrigins"];
-if (string.IsNullOrWhiteSpace(configuredOrigins) && builder.Environment.IsDevelopment())
-{
-    configuredOrigins = "http://localhost:3000";
-}
 
 var allowedOrigins = (configuredOrigins ?? string.Empty)
     .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
@@ -49,9 +45,18 @@ builder.Services.Configure<CloudinaryMediaOptions>(
     builder.Configuration.GetSection(CloudinaryMediaOptions.SectionName));
 builder.Services.Configure<PayOsOptions>(
     builder.Configuration.GetSection(PayOsOptions.SectionName));
+builder.Services.Configure<DeepSeekOptions>(
+    builder.Configuration.GetSection(DeepSeekOptions.SectionName));
 
 builder.Services.AddHttpClient<ICloudinaryMediaService, CloudinaryMediaService>();
 builder.Services.AddHttpClient<IPayOsService, PayOsService>();
+builder.Services.AddHttpClient<IAiNarrativeService, DeepSeekNarrativeService>((serviceProvider, client) =>
+{
+    var options = serviceProvider
+        .GetRequiredService<Microsoft.Extensions.Options.IOptions<DeepSeekOptions>>()
+        .Value;
+    client.BaseAddress = new Uri(options.BaseUrl.TrimEnd('/') + "/");
+});
 builder.Services.AddHostedService<DatabaseMigrationService>();
 builder.Services.AddScoped<ILearningAnalysisService, LearningAnalysisService>();
 
@@ -61,10 +66,9 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy(name: AllowReactApp, policy =>
     {
-        if (allowedOrigins.Length > 0)
-        {
-            policy.WithOrigins(allowedOrigins);
-        }
+        policy.SetIsOriginAllowed(origin =>
+            allowedOrigins.Contains(origin, StringComparer.OrdinalIgnoreCase) ||
+            (builder.Environment.IsDevelopment() && IsLoopbackOrigin(origin)));
 
         policy.AllowAnyHeader()
               .AllowAnyMethod();
@@ -114,6 +118,13 @@ app.MapGet("/health", () => Results.Text("OK"));
 app.MapControllers();
 
 app.Run();
+
+static bool IsLoopbackOrigin(string origin)
+{
+    return Uri.TryCreate(origin, UriKind.Absolute, out var uri) &&
+        (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps) &&
+        uri.IsLoopback;
+}
 
 static void LoadDotEnv(string path)
 {

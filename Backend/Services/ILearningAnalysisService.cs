@@ -75,7 +75,7 @@ public sealed class LessonRecommendationResult
 
     public string Reason { get; init; } = string.Empty;
 
-    public int Priority { get; init; }
+    public int Priority { get; set; }
 
     public DateTime RecommendedAt { get; init; }
 }

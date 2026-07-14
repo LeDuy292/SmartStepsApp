@@ -1,3 +1,6 @@
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using SmartStepsServer.Data;
@@ -6,6 +9,7 @@ using SmartStepsServer.Data.Models;
 namespace SmartStepsServer.Controllers;
 
 [ApiController]
+[Authorize]
 [Route("api/progress")]
 public sealed class ProgressController : ControllerBase
 {
@@ -30,6 +34,10 @@ public sealed class ProgressController : ControllerBase
         if (normalizedEmail is null || request.SituationId <= 0)
         {
             return BadRequest(new { message = "A valid userEmail and situationId are required." });
+        }
+        if (!IsCurrentUserEmail(normalizedEmail))
+        {
+            return Forbid();
         }
 
         var situation = await _dbContext.Situations
@@ -112,6 +120,10 @@ public sealed class ProgressController : ControllerBase
         {
             return BadRequest(new { message = "A valid userEmail, flashcardId and selectedAnswer (A or B) are required." });
         }
+        if (!IsCurrentUserEmail(normalizedEmail))
+        {
+            return Forbid();
+        }
 
         var flashcard = await _dbContext.Flashcards
             .AsNoTracking()
@@ -183,6 +195,10 @@ public sealed class ProgressController : ControllerBase
         {
             return BadRequest(new { message = "A valid userEmail, situationId and stepId are required." });
         }
+        if (!IsCurrentUserEmail(normalizedEmail))
+        {
+            return Forbid();
+        }
 
         var userId = await _dbContext.Users
             .Where(user => user.Email == normalizedEmail)
@@ -238,6 +254,10 @@ public sealed class ProgressController : ControllerBase
         if (normalizedEmail is null)
         {
             return BadRequest(new { message = "userEmail is required." });
+        }
+        if (!IsCurrentUserEmail(normalizedEmail))
+        {
+            return Forbid();
         }
 
         var user = await _dbContext.Users
@@ -296,6 +316,10 @@ public sealed class ProgressController : ControllerBase
         if (normalizedEmail is null)
         {
             return BadRequest(new { message = "userEmail is required." });
+        }
+        if (!IsCurrentUserEmail(normalizedEmail))
+        {
+            return Forbid();
         }
 
         if (request.SituationId <= 0)
@@ -417,6 +441,13 @@ public sealed class ProgressController : ControllerBase
     {
         var normalized = value?.Trim().ToLowerInvariant();
         return string.IsNullOrWhiteSpace(normalized) ? null : normalized;
+    }
+
+    private bool IsCurrentUserEmail(string email)
+    {
+        var claimEmail = User.FindFirstValue(JwtRegisteredClaimNames.Email) ??
+            User.FindFirstValue(ClaimTypes.Email);
+        return string.Equals(claimEmail?.Trim(), email, StringComparison.OrdinalIgnoreCase);
     }
 
     private static string BuildFullName(string? fullName, string email)

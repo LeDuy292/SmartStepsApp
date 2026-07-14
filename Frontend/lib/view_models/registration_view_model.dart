@@ -140,6 +140,11 @@ class RegistrationViewModel extends ChangeNotifier {
       _submitStatus = RegistrationSubmitStatus.success;
       notifyListeners();
       return true;
+    } on AuthServiceException catch (error) {
+      _submitStatus = RegistrationSubmitStatus.failure;
+      _submitError = error.message;
+      notifyListeners();
+      return false;
     } catch (error, stackTrace) {
       debugPrint('SmartSteps registration save failed: $error');
       debugPrintStack(stackTrace: stackTrace);

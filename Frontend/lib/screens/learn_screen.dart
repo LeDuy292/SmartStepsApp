@@ -3,7 +3,9 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../models/child_profile.dart';
+import '../models/learning_analysis.dart';
 import '../models/situation.dart';
+import '../services/learning_service.dart';
 import '../services/local_profile_storage.dart';
 import '../services/situation_service.dart';
 import '../theme/duo_theme.dart';
@@ -39,6 +41,7 @@ class ParentReportPage extends StatefulWidget {
 class _ParentReportPageState extends State<ParentReportPage> {
   List<_ParentReportEntry> _entries = _fallbackParentReportEntries;
   ChildProfile? _profile;
+  LearningAnalysis? _analysis;
   bool _isLoading = false;
   bool _hasLoaded = false;
   String? _error;
@@ -61,6 +64,7 @@ class _ParentReportPageState extends State<ParentReportPage> {
       setState(() {
         _entries = _fallbackParentReportEntries;
         _profile = null;
+        _analysis = null;
         _isLoading = false;
         _hasLoaded = false;
         _error = null;
@@ -71,8 +75,8 @@ class _ParentReportPageState extends State<ParentReportPage> {
       return;
     }
 
-    if (!oldWidget.isActive && widget.isActive && !_hasLoaded && !_isLoading) {
-      unawaited(_loadReport());
+    if (!oldWidget.isActive && widget.isActive && !_isLoading) {
+      unawaited(_loadReport(force: true));
     }
   }
 
@@ -104,14 +108,43 @@ class _ParentReportPageState extends State<ParentReportPage> {
     try {
       final profile = await widget.profileStorage.readProfile();
       final entries = await _fetchReportEntries(profile);
+      LearningAnalysis? analysis;
+      String? analysisError;
+      try {
+        final learningService = LearningService();
+        analysis = await learningService.generateReport();
+        if (!analysis.hasEnoughData) {
+          final locallyCompletedSituationIds = entries
+              .where((entry) => entry.points > 0)
+              .map((entry) => entry.situationId)
+              .toSet();
+          for (final situationId in locallyCompletedSituationIds) {
+            await learningService.completeSituation(situationId);
+          }
+          if (locallyCompletedSituationIds.isNotEmpty) {
+            analysis = await learningService.generateReport();
+          }
+        }
+        if (!analysis.hasEnoughData) {
+          analysisError = analysis.message;
+        }
+      } catch (error) {
+        debugPrint('SmartSteps learning analysis failed: $error');
+        analysisError =
+            'Không tải được phân tích từ máy chủ; đang hiển thị tiến độ cục bộ.';
+      }
       if (!mounted) {
         return;
       }
 
       setState(() {
-        _entries = entries.isEmpty ? _fallbackParentReportEntries : entries;
+        final baseEntries = entries.isEmpty
+            ? _fallbackParentReportEntries
+            : entries;
+        _entries = _applyLearningAnalysis(baseEntries, analysis);
         _profile = profile;
-        _error = entries.isEmpty ? 'Chưa có dữ liệu báo cáo.' : null;
+        _analysis = analysis;
+        _error = entries.isEmpty ? 'Chưa có dữ liệu báo cáo.' : analysisError;
         _isLoading = false;
         _hasLoaded = true;
       });
@@ -124,6 +157,7 @@ class _ParentReportPageState extends State<ParentReportPage> {
 
       setState(() {
         _entries = _fallbackParentReportEntries;
+        _analysis = null;
         _error = 'Đang hiển thị dữ liệu mẫu vì chưa tải được báo cáo.';
         _isLoading = false;
         _hasLoaded = true;
@@ -233,6 +267,7 @@ class _ParentReportPageState extends State<ParentReportPage> {
                                   profile: _profile,
                                   entries: displayEntries,
                                   focusEntry: focusEntry,
+                                  analysis: _analysis,
                                 ),
                                 const SizedBox(height: 18),
                                 if (_error != null) ...[
@@ -259,23 +294,39 @@ class _ParentReportPageState extends State<ParentReportPage> {
                                   child: _activeSubTabIndex == 0
                                       ? Column(
                                           key: const ValueKey('tab-progress'),
-                                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.stretch,
                                           children: [
-                                            _MascotInsightCard(focusEntry: focusEntry),
+                                            if (_analysis?.hasEnoughData ==
+                                                true) ...[
+                                              _AnalysisSummaryCard(
+                                                analysis: _analysis!,
+                                              ),
+                                              const SizedBox(height: 16),
+                                            ],
+                                            _MascotInsightCard(
+                                              focusEntry: focusEntry,
+                                            ),
                                             const SizedBox(height: 16),
-                                            _SkillScoreListCard(entries: displayEntries),
+                                            _SkillScoreListCard(
+                                              entries: displayEntries,
+                                            ),
                                           ],
                                         )
                                       : Column(
                                           key: const ValueKey('tab-practice'),
-                                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.stretch,
                                           children: [
-                                            _ForgottenFocusCard(focusEntry: focusEntry),
+                                            _ForgottenFocusCard(
+                                              focusEntry: focusEntry,
+                                            ),
                                             const SizedBox(height: 16),
                                             _NextLessonSuggestionCard(
                                               focusEntry: focusEntry,
                                               entries: displayEntries,
-                                              onStartLesson: widget.onStartLesson,
+                                              onStartLesson:
+                                                  widget.onStartLesson,
                                             ),
                                           ],
                                         ),
@@ -299,11 +350,13 @@ class _LearnHeader extends StatelessWidget {
     required this.profile,
     required this.entries,
     required this.focusEntry,
+    this.analysis,
   });
 
   final ChildProfile? profile;
   final List<_ParentReportEntry> entries;
   final _ParentReportEntry focusEntry;
+  final LearningAnalysis? analysis;
 
   @override
   Widget build(BuildContext context) {
@@ -311,8 +364,12 @@ class _LearnHeader extends StatelessWidget {
       0,
       (total, entry) => total + entry.points,
     );
-    final completedLessons = entries.where((entry) => entry.points > 0).length;
-    final totalLessons = entries.isEmpty ? 1 : entries.length;
+    final completedLessons = analysis?.hasEnoughData == true
+        ? analysis!.completedLessons
+        : entries.where((entry) => entry.points > 0).length;
+    final totalLessons = analysis?.hasEnoughData == true
+        ? (analysis!.totalLessons == 0 ? 1 : analysis!.totalLessons)
+        : (entries.isEmpty ? 1 : entries.length);
     final level = (totalPoints ~/ 3) + 1;
     final childName = _displayChildName(profile);
     final progress = (completedLessons / totalLessons)
@@ -342,7 +399,9 @@ class _LearnHeader extends StatelessWidget {
             Expanded(
               child: _LearnMetricChip(
                 icon: Icons.military_tech_rounded,
-                label: 'Cấp $level',
+                label: analysis?.hasEnoughData == true
+                    ? '${(analysis!.correctRate * 100).round()}% đúng'
+                    : 'Cấp $level',
                 color: DuoColors.darkYellow,
               ),
             ),
@@ -452,8 +511,6 @@ class _LearnMetricChip extends StatelessWidget {
   }
 }
 
-
-
 class _ParentReportLoadingView extends StatelessWidget {
   const _ParentReportLoadingView();
 
@@ -560,6 +617,57 @@ class _ContinueLearningCard extends StatelessWidget {
               ],
             ),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+class _AnalysisSummaryCard extends StatelessWidget {
+  const _AnalysisSummaryCard({required this.analysis});
+
+  final LearningAnalysis analysis;
+
+  @override
+  Widget build(BuildContext context) {
+    final sourceLabel = analysis.narrativeSource == 'RuleBasedFallback'
+        ? 'Phân tích theo quy tắc an toàn'
+        : 'Nhận xét AI';
+
+    return DuoCard(
+      color: const Color(0xFFF4FFE8),
+      borderColor: DuoColors.success.withValues(alpha: 0.32),
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.auto_awesome_rounded, color: DuoColors.success),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  sourceLabel,
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+              ),
+              Text(
+                '${analysis.activeDays} ngày học',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Text(analysis.summary, style: Theme.of(context).textTheme.bodyMedium),
+          if (analysis.parentAdvice.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            Text(
+              analysis.parentAdvice.first,
+              style: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w700),
+            ),
+          ],
         ],
       ),
     );
@@ -869,7 +977,10 @@ class _NextLessonSuggestionCard extends StatelessWidget {
                         label: 'Bắt đầu ngay',
                         icon: Icons.play_arrow_rounded,
                         onPressed: onStartLesson != null
-                            ? () => onStartLesson!(nextEntry.situationId, nextEntry.islandId)
+                            ? () => onStartLesson!(
+                                nextEntry.situationId,
+                                nextEntry.islandId,
+                              )
                             : null,
                         backgroundColor: DuoColors.success,
                       ),
@@ -988,6 +1099,11 @@ class _ParentReportEntry {
     this.points = 0,
     this.completedCount = 0,
     this.lastCompletedAt,
+    this.masteryLevel,
+    this.analysisCorrectRate,
+    this.recommendationReason,
+    this.recommendationType,
+    this.recommendationPriority = 0,
   });
 
   factory _ParentReportEntry.fromDetail(SituationDetail detail) {
@@ -1046,6 +1162,47 @@ class _ParentReportEntry {
       points: progress.points,
       completedCount: progress.completedCount,
       lastCompletedAt: progress.lastCompletedAt,
+      masteryLevel: masteryLevel,
+      analysisCorrectRate: analysisCorrectRate,
+      recommendationReason: recommendationReason,
+      recommendationType: recommendationType,
+      recommendationPriority: recommendationPriority,
+    );
+  }
+
+  _ParentReportEntry withAnalysis({
+    LearningSkillAssessment? skill,
+    LearningRecommendation? recommendation,
+  }) {
+    final analysisPoints = switch (skill?.masteryLevel) {
+      'Mastered' => 3,
+      'Achieved' => 2,
+      'NeedsReview' => 1,
+      'NotAchieved' => 0,
+      _ => points,
+    };
+
+    return _ParentReportEntry(
+      situationId: situationId,
+      islandId: islandId,
+      situationOrder: situationOrder,
+      islandName: islandName,
+      lessonTitle: lessonTitle,
+      skillName: skill?.skillName ?? skillName,
+      skillDescription: skillDescription,
+      realLifeQuestion: realLifeQuestion,
+      practicePrompt: practicePrompt,
+      watchOut: recommendation?.reason ?? watchOut,
+      points: analysisPoints,
+      completedCount: skill?.totalAttempts ?? completedCount,
+      lastCompletedAt: lastCompletedAt,
+      masteryLevel: skill?.masteryLevel ?? masteryLevel,
+      analysisCorrectRate: skill?.correctRate ?? analysisCorrectRate,
+      recommendationReason: recommendation?.reason ?? recommendationReason,
+      recommendationType:
+          recommendation?.recommendationType ?? recommendationType,
+      recommendationPriority:
+          recommendation?.priority ?? recommendationPriority,
     );
   }
 
@@ -1062,6 +1219,48 @@ class _ParentReportEntry {
   final int points;
   final int completedCount;
   final DateTime? lastCompletedAt;
+  final String? masteryLevel;
+  final double? analysisCorrectRate;
+  final String? recommendationReason;
+  final String? recommendationType;
+  final int recommendationPriority;
+}
+
+List<_ParentReportEntry> _applyLearningAnalysis(
+  List<_ParentReportEntry> entries,
+  LearningAnalysis? analysis,
+) {
+  if (analysis == null || !analysis.hasEnoughData) {
+    return entries;
+  }
+
+  LearningSkillAssessment? skillFor(_ParentReportEntry entry) {
+    for (final skill in analysis.skills) {
+      if (skill.skillName.trim().toLowerCase() ==
+          entry.skillName.trim().toLowerCase()) {
+        return skill;
+      }
+    }
+    return null;
+  }
+
+  LearningRecommendation? recommendationFor(_ParentReportEntry entry) {
+    for (final recommendation in analysis.recommendations) {
+      if (recommendation.situationId == entry.situationId) {
+        return recommendation;
+      }
+    }
+    return null;
+  }
+
+  return entries
+      .map(
+        (entry) => entry.withAnalysis(
+          skill: skillFor(entry),
+          recommendation: recommendationFor(entry),
+        ),
+      )
+      .toList(growable: false);
 }
 
 String _firstNonEmpty(Iterable<String?> values) {
@@ -1076,6 +1275,14 @@ String _firstNonEmpty(Iterable<String?> values) {
 }
 
 _ParentReportEntry _preferredFocusEntry(List<_ParentReportEntry> entries) {
+  final recommended =
+      entries.where((entry) => entry.recommendationPriority > 0).toList()..sort(
+        (a, b) => b.recommendationPriority.compareTo(a.recommendationPriority),
+      );
+  if (recommended.isNotEmpty) {
+    return recommended.first;
+  }
+
   final completed = entries.where((entry) => entry.points > 0).toList()
     ..sort((a, b) {
       final aTime = a.lastCompletedAt ?? DateTime.fromMillisecondsSinceEpoch(0);
@@ -1100,6 +1307,14 @@ _ParentReportEntry _nextSuggestedEntry(
   List<_ParentReportEntry> entries,
   _ParentReportEntry focusEntry,
 ) {
+  final recommended =
+      entries.where((entry) => entry.recommendationPriority > 0).toList()..sort(
+        (a, b) => b.recommendationPriority.compareTo(a.recommendationPriority),
+      );
+  if (recommended.isNotEmpty) {
+    return recommended.first;
+  }
+
   for (final entry in entries) {
     if (entry.points == 0) {
       return entry;
@@ -1137,6 +1352,8 @@ List<String> _reportQuestionsFor(
 
 List<String> _forgottenItemsFor(_ParentReportEntry entry) {
   return [
+    if (entry.recommendationReason?.trim().isNotEmpty == true)
+      _compactReportText(entry.recommendationReason!),
     _compactReportText(entry.watchOut),
     _compactReportText('Ôn lại ${entry.lessonTitle}'),
   ];
@@ -1290,7 +1507,9 @@ class _SegmentButton extends StatelessWidget {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
-                  color: isSelected ? DuoColors.textPrimary : DuoColors.textSecondary,
+                  color: isSelected
+                      ? DuoColors.textPrimary
+                      : DuoColors.textSecondary,
                   fontSize: 14,
                   fontWeight: FontWeight.w900,
                 ),
