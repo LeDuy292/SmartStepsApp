@@ -15,8 +15,11 @@ class RegistrationViewModel extends ChangeNotifier {
   RegistrationViewModel({
     required LocalProfileStorage profileStorage,
     RegistrationDraft initialDraft = const RegistrationDraft(),
+    this.isSurveyOnly = false,
   }) : _profileStorage = profileStorage,
        _draft = initialDraft;
+
+  final bool isSurveyOnly;
 
   final LocalProfileStorage _profileStorage;
 
@@ -118,17 +121,19 @@ class RegistrationViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final success = await AuthService().register(
-        _draft.childName,
-        _draft.email.trim(),
-        _draft.password,
-        'Child',
-      );
-      if (!success) {
-        _submitStatus = RegistrationSubmitStatus.failure;
-        _submitError = 'Đăng ký tài khoản trên máy chủ thất bại.';
-        notifyListeners();
-        return false;
+      if (!isSurveyOnly) {
+        final success = await AuthService().register(
+          _draft.childName,
+          _draft.email.trim(),
+          _draft.password,
+          'Child',
+        );
+        if (!success) {
+          _submitStatus = RegistrationSubmitStatus.failure;
+          _submitError = 'Đăng ký tài khoản trên máy chủ thất bại.';
+          notifyListeners();
+          return false;
+        }
       }
 
       await _profileStorage.saveProfile(_draft.toProfile());
@@ -172,12 +177,14 @@ class RegistrationViewModel extends ChangeNotifier {
     if (name.length < 2) {
       return 'Tên cần có ít nhất 2 ký tự.';
     }
-    final email = _draft.email.trim();
-    if (email.isEmpty || !email.contains('@')) {
-      return 'Hãy nhập email hợp lệ.';
-    }
-    if (_draft.password.length < 6) {
-      return 'Mật khẩu cần ít nhất 6 ký tự.';
+    if (!isSurveyOnly) {
+      final email = _draft.email.trim();
+      if (email.isEmpty || !email.contains('@')) {
+        return 'Hãy nhập email hợp lệ.';
+      }
+      if (_draft.password.length < 6) {
+        return 'Mật khẩu cần ít nhất 6 ký tự.';
+      }
     }
     return null;
   }
