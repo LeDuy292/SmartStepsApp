@@ -5,31 +5,45 @@ import 'package:jwt_decoder/jwt_decoder.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:flutter/foundation.dart';
 
+import '../models/child_profile.dart';
+import '../utils/constants.dart';
+import 'local_profile_storage.dart';
+
 class AuthService {
   static String get baseUrl {
-    if (kIsWeb) {
-      return 'http://localhost:8080/api/auth';
+    final configured = AppConstants.apiBaseUrl.trim();
+    if (configured.isNotEmpty) {
+      return '${configured.replaceFirst(RegExp(r'/$'), '')}/api/auth';
     }
-    return 'http://10.0.2.2:8080/api/auth';
+    return kIsWeb
+        ? 'http://localhost:8080/api/auth'
+        : 'http://10.0.2.2:8080/api/auth';
   }
 
   final GoogleSignIn _googleSignIn = GoogleSignIn.instance;
-  bool _isGoogleSignInInitialized = false;
+  static Future<void>? _googleInitialization;
 
-  Future<void> ensureGoogleSignInInitialized() async {
-    if (!_isGoogleSignInInitialized) {
-      try {
-        await _googleSignIn.initialize(
-          clientId: '924493667390-cqn55fuer1la0p0vqsvotmubvtsbb7ic.apps.googleusercontent.com', 
-        );
-      } catch (e) {
-        // Ignore initialization error on web during hot reload
-      }
-      _isGoogleSignInInitialized = true;
+  Future<void> ensureGoogleSignInInitialized() {
+    return _googleInitialization ??= _initializeGoogleSignIn();
+  }
+
+  Future<void> _initializeGoogleSignIn() async {
+    try {
+      await _googleSignIn.initialize(
+        clientId:
+            '924493667390-cqn55fuer1la0p0vqsvotmubvtsbb7ic.apps.googleusercontent.com',
+      );
+    } catch (_) {
+      // The web plugin can already be initialized after a hot reload.
     }
   }
 
-  Future<bool> register(String fullName, String email, String password, String role) async {
+  Future<bool> register(
+    String fullName,
+    String email,
+    String password,
+    String role,
+  ) async {
     try {
       final response = await http.post(
         Uri.parse('$baseUrl/register'),
@@ -43,13 +57,34 @@ class AuthService {
       );
 
       if (response.statusCode == 200) {
-        return true;
+        return login(email, password);
       }
-      return false;
+      throw AuthServiceException(_registrationError(response));
     } catch (e) {
-      print('Register error: $e');
+      if (e is AuthServiceException) {
+        rethrow;
+      }
+      debugPrint('Register error: $e');
       return false;
     }
+  }
+
+  String _registrationError(http.Response response) {
+    try {
+      final data = jsonDecode(response.body);
+      final message = data is Map<String, dynamic>
+          ? data['message']?.toString()
+          : null;
+      if (message == 'Email is already in use.') {
+        return 'Email này đã được sử dụng. Hãy đăng nhập hoặc dùng email khác.';
+      }
+      if (message != null && message.trim().isNotEmpty) {
+        return message;
+      }
+    } catch (_) {
+      // Fall through to the status-based message.
+    }
+    return 'Đăng ký thất bại (mã ${response.statusCode}). Vui lòng kiểm tra lại thông tin.';
   }
 
   Future<bool> login(String email, String password) async {
@@ -57,15 +92,13 @@ class AuthService {
       final response = await http.post(
         Uri.parse('$baseUrl/login'),
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'Email': email,
-          'Password': password,
-        }),
+        body: jsonEncode({'Email': email, 'Password': password}),
       );
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         await _saveToken(data['token']);
+        await _restoreBasicChildProfileIfMissing(data);
         return true;
       }
       return false;
@@ -86,7 +119,8 @@ class AuthService {
 
   Future<bool> processGoogleUser(GoogleSignInAccount googleUser) async {
     try {
-      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+      final GoogleSignInAuthentication googleAuth =
+          await googleUser.authentication;
       final String? idToken = googleAuth.idToken;
 
       if (idToken == null) return false;
@@ -94,15 +128,13 @@ class AuthService {
       final response = await http.post(
         Uri.parse('$baseUrl/google'),
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'IdToken': idToken,
-          'Role': 'Child',
-        }),
+        body: jsonEncode({'IdToken': idToken, 'Role': 'Child'}),
       );
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         await _saveToken(data['token']);
+        await _restoreBasicChildProfileIfMissing(data);
         return true;
       }
       return false;
@@ -142,6 +174,31 @@ class AuthService {
     await prefs.setString('jwt_token', token);
   }
 
+  Future<void> _restoreBasicChildProfileIfMissing(
+    Map<String, dynamic> authData,
+  ) async {
+    if (authData['role']?.toString() != 'Child') {
+      return;
+    }
+
+    const profileStorage = LocalProfileStorage();
+    if (await profileStorage.hasProfile()) {
+      return;
+    }
+
+    final fullName = authData['fullName']?.toString().trim();
+    await profileStorage.saveProfile(
+      ChildProfile(
+        childName: fullName == null || fullName.isEmpty ? 'Bé' : fullName,
+        age: '',
+        gender: '',
+        learningGoals: const [],
+        acceptedTerms: false,
+        completedAt: DateTime.now(),
+      ),
+    );
+  }
+
   Future<String?> getToken() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString('jwt_token');
@@ -156,11 +213,35 @@ class AuthService {
   Future<String?> getUserRole() async {
     final token = await getToken();
     if (token == null) return null;
-    
+
     Map<String, dynamic> decodedToken = JwtDecoder.decode(token);
     // ASP.NET Core usually puts role in 'http://schemas.microsoft.com/ws/2008/06/identity/claims/role'
     // or just 'role'.
-    return decodedToken['role'] ?? decodedToken['http://schemas.microsoft.com/ws/2008/06/identity/claims/role'];
+    return decodedToken['role'] ??
+        decodedToken['http://schemas.microsoft.com/ws/2008/06/identity/claims/role'];
+  }
+
+  Future<int?> getUserId() async {
+    final claims = await _getTokenClaims();
+    final value = claims?['UserId'] ?? claims?['sub'];
+    return value is int ? value : int.tryParse(value?.toString() ?? '');
+  }
+
+  Future<String?> getUserEmail() async {
+    final claims = await _getTokenClaims();
+    final value =
+        claims?['email'] ??
+        claims?['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress'];
+    final email = value?.toString().trim();
+    return email == null || email.isEmpty ? null : email;
+  }
+
+  Future<Map<String, dynamic>?> _getTokenClaims() async {
+    final token = await getToken();
+    if (token == null || JwtDecoder.isExpired(token)) {
+      return null;
+    }
+    return JwtDecoder.decode(token);
   }
 
   Future<bool> forgotPassword(String email) async {
@@ -178,4 +259,13 @@ class AuthService {
       return false;
     }
   }
+}
+
+class AuthServiceException implements Exception {
+  const AuthServiceException(this.message);
+
+  final String message;
+
+  @override
+  String toString() => message;
 }

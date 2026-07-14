@@ -14,6 +14,7 @@ import 'package:video_player/video_player.dart';
 import '../services/supabase_config.dart';
 import '../services/app_audio_controller.dart';
 import '../services/local_profile_storage.dart';
+import '../services/learning_service.dart';
 import '../services/registration_avatar_service.dart';
 import '../services/analytics_service.dart';
 import '../theme/duo_theme.dart';
@@ -108,11 +109,11 @@ class _SmartStepsBootstrapAppState extends State<_SmartStepsBootstrapApp> {
         debugPrintStack(stackTrace: stackTrace);
       }
       loaded++;
-      
+
       // Delay slightly between each asset to spacing out the loading CPU spike
       // and ensure a smooth visual experience of about 2 - 2.5 seconds
       await Future.delayed(const Duration(milliseconds: 55));
-      
+
       if (mounted) {
         setState(() {
           _loadingProgress = loaded / imageAssets.length;
@@ -244,7 +245,10 @@ class _SmartStepsBootSplashState extends State<_SmartStepsBootSplash> {
                     minHeight: constraints.maxHeight - 40,
                   ),
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 24,
+                      vertical: 16,
+                    ),
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
@@ -253,12 +257,19 @@ class _SmartStepsBootSplashState extends State<_SmartStepsBootSplash> {
                           children: [
                             const SizedBox(height: 20),
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 8,
+                              ),
                               decoration: BoxDecoration(
-                                color: DuoColors.primaryYellow.withValues(alpha: 0.15),
+                                color: DuoColors.primaryYellow.withValues(
+                                  alpha: 0.15,
+                                ),
                                 borderRadius: BorderRadius.circular(99),
                                 border: Border.all(
-                                  color: DuoColors.primaryYellow.withValues(alpha: 0.4),
+                                  color: DuoColors.primaryYellow.withValues(
+                                    alpha: 0.4,
+                                  ),
                                   width: 1.5,
                                 ),
                               ),
@@ -287,7 +298,10 @@ class _SmartStepsBootSplashState extends State<_SmartStepsBootSplash> {
 
                         // Middle: Loading Road Path
                         TweenAnimationBuilder<double>(
-                          tween: Tween<double>(begin: 0.0, end: widget.progress),
+                          tween: Tween<double>(
+                            begin: 0.0,
+                            end: widget.progress,
+                          ),
                           duration: const Duration(milliseconds: 350),
                           curve: Curves.easeOutCubic,
                           onEnd: () {
@@ -300,19 +314,25 @@ class _SmartStepsBootSplashState extends State<_SmartStepsBootSplash> {
                                 _checkFinished(val);
                               });
                             }
-                            
+
                             return LayoutBuilder(
                               builder: (context, roadConstraints) {
                                 final parentWidth = roadConstraints.maxWidth;
                                 final roadStartX = 32.0;
                                 final roadEndX = parentWidth - 32.0;
                                 final roadWidth = roadEndX - roadStartX;
-                                
+
                                 // Mascot bounce and tilt
-                                final bounceFactor = math.sin(val * math.pi * 20).abs();
-                                final yBounce = val >= 0.99 ? 0.0 : -bounceFactor * 12.0;
-                                final tiltAngle = val >= 0.99 ? 0.0 : math.sin(val * math.pi * 20) * 0.08;
-                                
+                                final bounceFactor = math
+                                    .sin(val * math.pi * 20)
+                                    .abs();
+                                final yBounce = val >= 0.99
+                                    ? 0.0
+                                    : -bounceFactor * 12.0;
+                                final tiltAngle = val >= 0.99
+                                    ? 0.0
+                                    : math.sin(val * math.pi * 20) * 0.08;
+
                                 return SizedBox(
                                   height: 180,
                                   child: Stack(
@@ -327,10 +347,14 @@ class _SmartStepsBootSplashState extends State<_SmartStepsBootSplash> {
                                           height: 16,
                                           decoration: BoxDecoration(
                                             color: DuoColors.lockedGray,
-                                            borderRadius: BorderRadius.circular(8),
+                                            borderRadius: BorderRadius.circular(
+                                              8,
+                                            ),
                                             boxShadow: [
                                               BoxShadow(
-                                                color: Colors.black.withValues(alpha: 0.04),
+                                                color: Colors.black.withValues(
+                                                  alpha: 0.04,
+                                                ),
                                                 blurRadius: 4,
                                                 offset: const Offset(0, 2),
                                               ),
@@ -349,18 +373,25 @@ class _SmartStepsBootSplashState extends State<_SmartStepsBootSplash> {
                                           decoration: BoxDecoration(
                                             gradient: const LinearGradient(
                                               colors: [
-                                                Color(0xFF4ADE80), // Tailwind green-400
-                                                Color(0xFF22C55E), // Tailwind green-500
+                                                Color(
+                                                  0xFF4ADE80,
+                                                ), // Tailwind green-400
+                                                Color(
+                                                  0xFF22C55E,
+                                                ), // Tailwind green-500
                                               ],
                                             ),
-                                            borderRadius: BorderRadius.circular(8),
+                                            borderRadius: BorderRadius.circular(
+                                              8,
+                                            ),
                                           ),
                                         ),
                                       ),
 
                                       // Milestone 1 (25%): Self-care Bed
                                       _buildMilestone(
-                                        left: roadStartX + roadWidth * 0.25 - 23,
+                                        left:
+                                            roadStartX + roadWidth * 0.25 - 23,
                                         bottom: 35,
                                         isActive: val >= 0.25,
                                         icon: Icons.bed_rounded,
@@ -370,7 +401,8 @@ class _SmartStepsBootSplashState extends State<_SmartStepsBootSplash> {
 
                                       // Milestone 2 (50%): Road Safety
                                       _buildMilestone(
-                                        left: roadStartX + roadWidth * 0.50 - 23,
+                                        left:
+                                            roadStartX + roadWidth * 0.50 - 23,
                                         bottom: 35,
                                         isActive: val >= 0.50,
                                         icon: Icons.traffic_rounded,
@@ -380,7 +412,8 @@ class _SmartStepsBootSplashState extends State<_SmartStepsBootSplash> {
 
                                       // Milestone 3 (75%): Environment Trash
                                       _buildMilestone(
-                                        left: roadStartX + roadWidth * 0.75 - 23,
+                                        left:
+                                            roadStartX + roadWidth * 0.75 - 23,
                                         bottom: 35,
                                         isActive: val >= 0.75,
                                         icon: Icons.recycling_rounded,
@@ -401,7 +434,8 @@ class _SmartStepsBootSplashState extends State<_SmartStepsBootSplash> {
 
                                       // Moving Mascot Cat
                                       Positioned(
-                                        left: roadStartX + (roadWidth * val) - 40,
+                                        left:
+                                            roadStartX + (roadWidth * val) - 40,
                                         bottom: 60, // Sits above the road
                                         child: Transform.translate(
                                           offset: Offset(0, yBounce),
@@ -431,13 +465,18 @@ class _SmartStepsBootSplashState extends State<_SmartStepsBootSplash> {
                           children: [
                             // Text Bubble
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 20,
+                                vertical: 16,
+                              ),
                               margin: const EdgeInsets.only(bottom: 12),
                               decoration: BoxDecoration(
                                 color: Colors.white,
                                 borderRadius: BorderRadius.circular(24),
                                 border: Border.all(
-                                  color: DuoColors.border.withValues(alpha: 0.6),
+                                  color: DuoColors.border.withValues(
+                                    alpha: 0.6,
+                                  ),
                                   width: 2.0,
                                 ),
                                 boxShadow: [
@@ -451,7 +490,10 @@ class _SmartStepsBootSplashState extends State<_SmartStepsBootSplash> {
                               child: AnimatedSwitcher(
                                 duration: const Duration(milliseconds: 300),
                                 transitionBuilder: (child, animation) {
-                                  return FadeTransition(opacity: animation, child: child);
+                                  return FadeTransition(
+                                    opacity: animation,
+                                    child: child,
+                                  );
                                 },
                                 child: Text(
                                   _loadingTexts[_textIndex],
@@ -469,7 +511,10 @@ class _SmartStepsBootSplashState extends State<_SmartStepsBootSplash> {
 
                             // Progress Percentage
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 14,
+                                vertical: 6,
+                              ),
                               decoration: BoxDecoration(
                                 color: DuoColors.softYellow,
                                 borderRadius: BorderRadius.circular(99),
@@ -508,7 +553,7 @@ class _SmartStepsBootSplashState extends State<_SmartStepsBootSplash> {
     bool isFinish = false,
   }) {
     final activeColor = isFinish ? const Color(0xFFFACC15) : color;
-    
+
     return Positioned(
       left: left,
       bottom: bottom,
@@ -541,7 +586,9 @@ class _SmartStepsBootSplashState extends State<_SmartStepsBootSplash> {
             child: Center(
               child: Icon(
                 icon,
-                color: isActive ? activeColor : DuoColors.textSecondary.withValues(alpha: 0.6),
+                color: isActive
+                    ? activeColor
+                    : DuoColors.textSecondary.withValues(alpha: 0.6),
                 size: isActive ? 24 : 20,
               ),
             ),
@@ -550,7 +597,9 @@ class _SmartStepsBootSplashState extends State<_SmartStepsBootSplash> {
           Text(
             label,
             style: TextStyle(
-              color: isActive ? DuoColors.textPrimary : DuoColors.textSecondary.withValues(alpha: 0.6),
+              color: isActive
+                  ? DuoColors.textPrimary
+                  : DuoColors.textSecondary.withValues(alpha: 0.6),
               fontSize: 11,
               fontWeight: isActive ? FontWeight.w900 : FontWeight.w700,
             ),
@@ -591,7 +640,7 @@ class _SmartStepsAppState extends State<SmartStepsApp> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (widget.enableAudio) {
+      if (widget.enableAudio && !kIsWeb) {
         unawaited(_audioController.startBackgroundMusic());
       }
     });
@@ -1045,14 +1094,21 @@ class _SmartStepsCatalogPageState extends State<SmartStepsCatalogPage>
       return;
     }
 
-    final currentIdx = _situations.indexWhere((s) => s.situationId == lesson.situationId);
-    final isLastLesson = currentIdx != -1 && currentIdx == _situations.length - 1;
-    final nextSituation = (currentIdx != -1 && currentIdx < _situations.length - 1)
+    final currentIdx = _situations.indexWhere(
+      (s) => s.situationId == lesson.situationId,
+    );
+    final isLastLesson =
+        currentIdx != -1 && currentIdx == _situations.length - 1;
+    final nextSituation =
+        (currentIdx != -1 && currentIdx < _situations.length - 1)
         ? _situations[currentIdx + 1]
         : null;
 
-    final currentIslandIndex = _islands.indexWhere((i) => i.islandId == lesson.islandId);
-    final nextIsland = (currentIslandIndex != -1 && currentIslandIndex < _islands.length - 1)
+    final currentIslandIndex = _islands.indexWhere(
+      (i) => i.islandId == lesson.islandId,
+    );
+    final nextIsland =
+        (currentIslandIndex != -1 && currentIslandIndex < _islands.length - 1)
         ? _islands[currentIslandIndex + 1]
         : null;
 
@@ -1089,7 +1145,10 @@ class _SmartStepsCatalogPageState extends State<SmartStepsCatalogPage>
                   Navigator.of(context).pop();
                   final currentIsland = _islandById(_islands, lesson.islandId);
                   if (currentIsland != null) {
-                    await _showIslandCompletionDialog(currentIsland, nextIsland);
+                    await _showIslandCompletionDialog(
+                      currentIsland,
+                      nextIsland,
+                    );
                   }
                 }
               : null,
@@ -1115,7 +1174,8 @@ class _SmartStepsCatalogPageState extends State<SmartStepsCatalogPage>
         !_isLoadingCatalog &&
         !_isLoadingIslandSituations &&
         _loadingSituationId == null;
-    final completedSituationIds = _profile?.skillProgress
+    final completedSituationIds =
+        _profile?.skillProgress
             .where((p) => p.points > 0)
             .map((p) => p.situationId)
             .toSet() ??
@@ -1260,7 +1320,8 @@ class _IslandCompletionDialog extends StatefulWidget {
   final VoidCallback onBackHome;
 
   @override
-  State<_IslandCompletionDialog> createState() => _IslandCompletionDialogState();
+  State<_IslandCompletionDialog> createState() =>
+      _IslandCompletionDialogState();
 }
 
 class _IslandCompletionDialogState extends State<_IslandCompletionDialog>
@@ -1305,24 +1366,18 @@ class _IslandCompletionDialogState extends State<_IslandCompletionDialog>
               Positioned(
                 width: 600,
                 height: 600,
-                child: CustomPaint(
-                  painter: _CelebrationRaysPainter(progress),
-                ),
+                child: CustomPaint(painter: _CelebrationRaysPainter(progress)),
               ),
               // Fireworks overlay
               Positioned(
                 width: 500,
                 height: 500,
-                child: CustomPaint(
-                  painter: _SideFireworksPainter(progress),
-                ),
+                child: CustomPaint(painter: _SideFireworksPainter(progress)),
               ),
               Positioned(
                 width: 400,
                 height: 400,
-                child: CustomPaint(
-                  painter: _CenterBurstPainter(progress),
-                ),
+                child: CustomPaint(painter: _CenterBurstPainter(progress)),
               ),
               ConstrainedBox(
                 constraints: BoxConstraints(
@@ -1375,7 +1430,9 @@ class _IslandCompletionDialogState extends State<_IslandCompletionDialog>
                             child: Column(
                               children: [
                                 Text(
-                                  widget.allLessonsCompleted ? 'HOÀN THÀNH XUẤT SẮC!' : 'HOÀN THÀNH rẢO!',
+                                  widget.allLessonsCompleted
+                                      ? 'HOÀN THÀNH XUẤT SẮC!'
+                                      : 'HOÀN THÀNH rẢO!',
                                   textAlign: TextAlign.center,
                                   style: const TextStyle(
                                     color: Color(0xFF2E7D32),
@@ -1390,7 +1447,8 @@ class _IslandCompletionDialogState extends State<_IslandCompletionDialog>
                                       ? 'Chúc mừng bé đã hoàn thành xuất sắc tất cả các bài học! Bé thật tuyệt vời!'
                                       : 'Chúc mừng bé đã hoàn thành xuất sắc các bài học tại',
                                   textAlign: TextAlign.center,
-                                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                  style: Theme.of(context).textTheme.bodyMedium
+                                      ?.copyWith(
                                         color: DuoColors.textSecondary,
                                       ),
                                 ),
@@ -1463,7 +1521,9 @@ class _IslandCompletionDialogState extends State<_IslandCompletionDialog>
                                 SizedBox(
                                   width: double.infinity,
                                   child: DuoPrimaryButton(
-                                    label: hasNext ? 'Về trang chủ' : 'Tuyệt vời, về trang chủ',
+                                    label: hasNext
+                                        ? 'Về trang chủ'
+                                        : 'Tuyệt vời, về trang chủ',
                                     icon: Icons.home_rounded,
                                     backgroundColor: const Color(0xFFE2E8F0),
                                     onPressed: widget.onBackHome,
@@ -1675,7 +1735,9 @@ class _PremiumOfferDialogState extends State<_PremiumOfferDialog> {
                   top: 0,
                   child: Container(
                     height: 14,
-                    color: _showSuccess ? const Color(0xFF8BC34A) : DuoColors.primaryYellow,
+                    color: _showSuccess
+                        ? const Color(0xFF8BC34A)
+                        : DuoColors.primaryYellow,
                   ),
                 ),
                 SingleChildScrollView(
@@ -1757,9 +1819,7 @@ class _PremiumOfferDialogState extends State<_PremiumOfferDialog> {
         const SizedBox(height: 20),
         const _PremiumBenefitRow('AI gợi ý bài học mỗi ngày'),
         const _PremiumBenefitRow('Không giới hạn màn chơi'),
-        const _PremiumBenefitRow(
-          'Huy hiệu và phần thưởng đặc biệt',
-        ),
+        const _PremiumBenefitRow('Huy hiệu và phần thưởng đặc biệt'),
         const _PremiumBenefitRow('Theo dõi tiến bộ của bé'),
         const _PremiumBenefitRow('Chế độ luyện tập nâng cao'),
         if (_errorText != null) ...[
@@ -1849,9 +1909,9 @@ class _PremiumOfferDialogState extends State<_PremiumOfferDialog> {
         Text(
           'Chúc mừng bé đã mở khóa toàn bộ hành trình và các tính năng đặc quyền!',
           textAlign: TextAlign.center,
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: DuoColors.textSecondary,
-              ),
+          style: Theme.of(
+            context,
+          ).textTheme.bodyMedium?.copyWith(color: DuoColors.textSecondary),
         ),
         const SizedBox(height: 20),
         Image.asset(
@@ -3329,7 +3389,9 @@ class _IslandLessonPathOverlay extends StatelessWidget {
                   isSelected:
                       activeLessonId ==
                       'situation-${situations[index].situationId}',
-                  isCompleted: completedSituationIds.contains(situations[index].situationId),
+                  isCompleted: completedSituationIds.contains(
+                    situations[index].situationId,
+                  ),
                   isLoading:
                       loadingSituationId == situations[index].situationId,
                   isUnlocked: _isSituationUnlocked(
@@ -3338,7 +3400,8 @@ class _IslandLessonPathOverlay extends StatelessWidget {
                   ),
                   onTap: () {
                     if (_isSituationUnlocked(situations[index], isPremium)) {
-                      final isCurrentSelected = activeLessonId ==
+                      final isCurrentSelected =
+                          activeLessonId ==
                           'situation-${situations[index].situationId}';
                       if (isCurrentSelected) {
                         onStartLesson();
@@ -3437,7 +3500,9 @@ class _IslandLessonPathNode extends StatelessWidget {
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: color.withValues(alpha: isSelected ? 0.55 : 0.34),
+                        color: color.withValues(
+                          alpha: isSelected ? 0.55 : 0.34,
+                        ),
                         blurRadius: isSelected ? 26 : 16,
                         offset: const Offset(0, 8),
                       ),
@@ -3474,10 +3539,7 @@ class _IslandLessonPathNode extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: const Color(0xFFFFB300),
                     shape: BoxShape.circle,
-                    border: Border.all(
-                      color: Colors.white,
-                      width: 2,
-                    ),
+                    border: Border.all(color: Colors.white, width: 2),
                     boxShadow: const [
                       BoxShadow(
                         color: Color(0x26000000),
@@ -5519,10 +5581,7 @@ class _SmartStepsLandingPageState extends State<SmartStepsLegacyLandingPage> {
 
     await Navigator.of(context).push(
       MaterialPageRoute<void>(
-        builder: (_) => LessonGameScreen(
-          lesson: lesson,
-          isLastLesson: false,
-        ),
+        builder: (_) => LessonGameScreen(lesson: lesson, isLastLesson: false),
       ),
     );
 
@@ -5825,5 +5884,3 @@ class _ParentalGateDialogState extends State<_ParentalGateDialog> {
     );
   }
 }
-
-

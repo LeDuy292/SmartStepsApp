@@ -5,7 +5,9 @@ using SmartStepsServer.Data.Models;
 
 namespace SmartStepsServer.Services;
 
-public sealed class LearningAnalysisService(SmartStepsDbContext dbContext) : ILearningAnalysisService
+public sealed class LearningAnalysisService(
+    SmartStepsDbContext dbContext,
+    IAiNarrativeService aiNarrativeService) : ILearningAnalysisService
 {
     public async Task<LearningAnalysisResult> GenerateAsync(
         int childId,
@@ -85,7 +87,6 @@ public sealed class LearningAnalysisService(SmartStepsDbContext dbContext) : ILe
             skillResults,
             catalog,
             DateTime.UtcNow);
-        await SaveRecommendationsAsync(childId, recommendations, cancellationToken);
 
         var totalLessons = periodProgress.Select(progress => progress.SituationId).Distinct().Count();
         var totalAnswers = periodAnswers.Count;
@@ -106,8 +107,56 @@ public sealed class LearningAnalysisService(SmartStepsDbContext dbContext) : ILe
             .Where(skill => skill.MasteryLevel is "NotAchieved" or "NeedsReview")
             .Select(skill => skill.SkillName)
             .ToList();
-        var parentAdvice = BuildParentAdvice(catalog, recommendations);
-        var summary = BuildSummary(completedSituationIds.Count, totalAnswers, correctRate, strongSkills, weakSkills);
+        var fallbackParentAdvice = BuildParentAdvice(catalog, recommendations);
+        var fallbackSummary = BuildSummary(
+            completedSituationIds.Count,
+            totalAnswers,
+            correctRate,
+            strongSkills,
+            weakSkills);
+        var fallbackStrengths = strongSkills.Count == 0
+            ? "Chưa có đủ dữ liệu để xác định điểm mạnh ổn định."
+            : string.Join(", ", strongSkills);
+        var fallbackAreasForImprovement = weakSkills.Count == 0
+            ? "Chưa ghi nhận kỹ năng cần ưu tiên cải thiện."
+            : string.Join(", ", weakSkills);
+
+        var aiRequest = new AiNarrativeRequest
+        {
+            CompletedLessons = completedSituationIds.Count,
+            TotalAnswers = totalAnswers,
+            CorrectAnswers = correctAnswers,
+            CorrectRate = correctRate,
+            StrongSkills = strongSkills,
+            WeakSkills = weakSkills,
+            Candidates = recommendations.Select(item => new AiLessonCandidate
+            {
+                SituationId = item.SituationId,
+                Title = item.SituationTitle,
+                RecommendationType = item.RecommendationType,
+                RuleReason = item.Reason,
+                RulePriority = item.Priority,
+            }).ToList(),
+            ApprovedParentActivities = fallbackParentAdvice,
+            PeriodFrom = periodFrom,
+            PeriodTo = periodTo,
+        };
+        var aiResult = await aiNarrativeService.GenerateAsync(aiRequest, cancellationToken);
+
+        var summary = aiResult.IsSuccess ? aiResult.Summary! : fallbackSummary;
+        var strengths = aiResult.IsSuccess ? aiResult.Strengths! : fallbackStrengths;
+        var areasForImprovement = aiResult.IsSuccess
+            ? aiResult.AreasForImprovement!
+            : fallbackAreasForImprovement;
+        var parentAdvice = aiResult.IsSuccess && aiResult.ParentAdvice.Count > 0
+            ? aiResult.ParentAdvice
+            : fallbackParentAdvice;
+        if (aiResult.IsSuccess)
+        {
+            recommendations = ApplyAiRanking(recommendations, aiResult.RankedSituationIds);
+        }
+
+        await SaveRecommendationsAsync(childId, recommendations, cancellationToken);
         var generatedAt = DateTime.UtcNow;
 
         var report = new LearningReport
@@ -119,35 +168,22 @@ public sealed class LearningAnalysisService(SmartStepsDbContext dbContext) : ILe
             CompletedLessons = completedSituationIds.Count,
             CorrectRate = correctRate,
             Summary = summary,
-            Strengths = strongSkills.Count == 0 ? "Chưa có đủ dữ liệu để xác định điểm mạnh ổn định." : string.Join(", ", strongSkills),
-            AreasForImprovement = weakSkills.Count == 0 ? "Chưa ghi nhận kỹ năng cần ưu tiên cải thiện." : string.Join(", ", weakSkills),
+            Strengths = strengths,
+            AreasForImprovement = areasForImprovement,
             ParentAdvice = string.Join("\n", parentAdvice),
             GeneratedAt = generatedAt,
         };
         dbContext.LearningReports.Add(report);
         await dbContext.SaveChangesAsync(cancellationToken);
 
-        var safeRequestData = JsonSerializer.Serialize(new
-        {
-            completedLessons = completedSituationIds.Count,
-            totalAnswers,
-            correctAnswers,
-            correctRate,
-            strongSkills,
-            weakSkills,
-            reviewSituationIds = recommendations
-                .Where(item => item.RecommendationType != "NextLesson")
-                .Select(item => item.SituationId),
-            candidateSituationIds = recommendations.Select(item => item.SituationId),
-            periodFrom,
-            periodTo,
-        });
+        var safeRequestData = JsonSerializer.Serialize(aiRequest);
         var safeResponseData = JsonSerializer.Serialize(new
         {
             summary,
-            strengths = report.Strengths,
-            areasForImprovement = report.AreasForImprovement,
+            strengths,
+            areasForImprovement,
             parentAdvice,
+            rankedSituationIds = recommendations.Select(item => item.SituationId),
         });
         dbContext.AIAnalysisLogs.Add(new AIAnalysisLog
         {
@@ -155,9 +191,9 @@ public sealed class LearningAnalysisService(SmartStepsDbContext dbContext) : ILe
             ReportId = report.ReportId,
             RequestData = safeRequestData,
             ResponseData = safeResponseData,
-            ModelName = "RuleBasedFallback",
-            Status = "Fallback",
-            ErrorMessage = "AI provider is not configured; approved rule-based narrative was used.",
+            ModelName = aiResult.IsSuccess ? aiResult.ModelName : "RuleBasedFallback",
+            Status = aiResult.IsSuccess ? "Succeeded" : "Fallback",
+            ErrorMessage = aiResult.IsSuccess ? null : aiResult.ErrorMessage,
             CreatedAt = generatedAt,
         });
         await dbContext.SaveChangesAsync(cancellationToken);
@@ -181,6 +217,7 @@ public sealed class LearningAnalysisService(SmartStepsDbContext dbContext) : ILe
             Skills = skillResults,
             Recommendations = recommendations,
             ParentAdvice = parentAdvice,
+            NarrativeSource = aiResult.IsSuccess ? aiResult.ModelName : "RuleBasedFallback",
         };
     }
 
@@ -406,6 +443,26 @@ public sealed class LearningAnalysisService(SmartStepsDbContext dbContext) : ILe
                 result.RecommendationId = entity.RecommendationId;
             }
         }
+    }
+
+    private static List<LessonRecommendationResult> ApplyAiRanking(
+        IReadOnlyCollection<LessonRecommendationResult> recommendations,
+        IReadOnlyList<int> rankedSituationIds)
+    {
+        var bySituationId = recommendations.ToDictionary(item => item.SituationId);
+        var ordered = rankedSituationIds
+            .Where(bySituationId.ContainsKey)
+            .Distinct()
+            .Select(id => bySituationId[id])
+            .Concat(recommendations.Where(item => !rankedSituationIds.Contains(item.SituationId)))
+            .ToList();
+
+        for (var index = 0; index < ordered.Count; index++)
+        {
+            ordered[index].Priority = Math.Max(1, 100 - index);
+        }
+
+        return ordered;
     }
 
     private static IReadOnlyList<string> BuildParentAdvice(

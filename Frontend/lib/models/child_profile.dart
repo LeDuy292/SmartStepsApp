@@ -145,10 +145,11 @@ class SkillProgress {
         DateTime.tryParse(_readString(json['lastCompletedAt'])) ??
         DateTime.tryParse(_readString(json['completedAt'])) ??
         DateTime.fromMillisecondsSinceEpoch(0);
+    final situationId = _normalizeSituationId(_readInt(json['situationId']));
 
     return SkillProgress(
-      situationId: _readInt(json['situationId']),
-      islandId: _readInt(json['islandId']),
+      situationId: situationId,
+      islandId: _normalizeIslandId(situationId, _readInt(json['islandId'])),
       islandName: _readString(json['islandName']),
       lessonTitle: _readString(json['lessonTitle']),
       skillName: _readString(json['skillName']),
@@ -269,4 +270,32 @@ int _readInt(Object? value) {
   }
 
   return 0;
+}
+
+int _normalizeSituationId(int situationId) {
+  return switch (situationId) {
+    101 => 1,
+    102 => 2,
+    103 => 3,
+    301 => 4,
+    302 => 5,
+    303 => 6,
+    201 => 7,
+    202 => 8,
+    203 => 9,
+    _ => situationId,
+  };
+}
+
+int _normalizeIslandId(int situationId, int fallbackIslandId) {
+  if (situationId >= 1 && situationId <= 3) {
+    return 1;
+  }
+  if (situationId >= 4 && situationId <= 6) {
+    return 2;
+  }
+  if (situationId >= 7 && situationId <= 9) {
+    return 3;
+  }
+  return fallbackIslandId;
 }

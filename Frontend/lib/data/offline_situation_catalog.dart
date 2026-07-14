@@ -17,9 +17,8 @@ const offlineIslandSummaries = [
   ),
   IslandSummary(
     islandId: 2,
-    name: _socialSafetyIsland,
-    description:
-        'Bé luyện cách xử lý khi gặp người lạ, bạn bè và các tình huống xã hội.',
+    name: _environmentSafetyIsland,
+    description: 'Bé học giữ an toàn khi đi lại, ở nơi công cộng và gần nước.',
     imageUrl: 'assets/images/Island_Icon.webp',
     orderIndex: 2,
     status: 'Published',
@@ -27,8 +26,9 @@ const offlineIslandSummaries = [
   ),
   IslandSummary(
     islandId: 3,
-    name: _environmentSafetyIsland,
-    description: 'Bé học giữ an toàn khi đi lại, ở nơi công cộng và gần nước.',
+    name: _socialSafetyIsland,
+    description:
+        'Bé luyện cách xử lý khi gặp người lạ, bạn bè và các tình huống xã hội.',
     imageUrl: 'assets/images/Island_Icon.webp',
     orderIndex: 3,
     status: 'Published',
@@ -38,7 +38,7 @@ const offlineIslandSummaries = [
 
 final offlineSituationDetails = <SituationDetail>[
   _lesson(
-    situationId: 101,
+    situationId: 1,
     islandId: 1,
     islandName: _personalSafetyIsland,
     title: 'Bài 1: Vật tròn lấp lánh',
@@ -64,9 +64,12 @@ final offlineSituationDetails = <SituationDetail>[
         'Nếu con nhặt được một viên bi hoặc vật nhỏ lạ trên sàn, con nên làm gì?',
     riskAlert:
         'Trẻ nhỏ khám phá thế giới bằng cách ngậm đồ vật. Hãy giữ các loại pin nút, nam châm hoặc những dị vật xa tầm tay bé.',
-    introMedia: 'https://res.cloudinary.com/dtm5a4bwr/video/upload/v1781136864/Safety_smallitems_intro_cw1tlh.mp4',
-    wrongMedia: 'https://res.cloudinary.com/dtm5a4bwr/video/upload/v1781136866/Safety_smallitems_wrong_pjogba.mp4',
-    correctMedia: 'https://res.cloudinary.com/dtm5a4bwr/video/upload/v1781136882/Safety_smallitems_correct_u5ubla.mp4',
+    introMedia:
+        'https://res.cloudinary.com/dtm5a4bwr/video/upload/v1781136864/Safety_smallitems_intro_cw1tlh.mp4',
+    wrongMedia:
+        'https://res.cloudinary.com/dtm5a4bwr/video/upload/v1781136866/Safety_smallitems_wrong_pjogba.mp4',
+    correctMedia:
+        'https://res.cloudinary.com/dtm5a4bwr/video/upload/v1781136882/Safety_smallitems_correct_u5ubla.mp4',
     questionVoice: 'assets/voices/Safety_smallitems/question.mp3',
     optionAVoice: 'assets/voices/Safety_smallitems/choice-put-mouth.mp3',
     optionBVoice: 'assets/voices/Safety_smallitems/choice-ask-adult.mp3',
@@ -74,7 +77,7 @@ final offlineSituationDetails = <SituationDetail>[
     optionBImage: 'assets/images/flashCard/Safety_smallitems/Correct.webp',
   ),
   _lesson(
-    situationId: 102,
+    situationId: 2,
     islandId: 1,
     islandName: _personalSafetyIsland,
     title: 'Bài 2: Bàn tay kỳ diệu và các cái lỗ',
@@ -101,7 +104,7 @@ final offlineSituationDetails = <SituationDetail>[
         'Trẻ rất thích khám phá các cấu trúc dạng lỗ. Hãy sử dụng nắp đậy ổ điện an toàn cho toàn bộ ổ cắm tầm thấp.',
   ),
   _lesson(
-    situationId: 103,
+    situationId: 3,
     islandId: 1,
     islandName: _personalSafetyIsland,
     title: 'Bài 3: Cơn nghiện "ấn nút"',
@@ -128,8 +131,8 @@ final offlineSituationDetails = <SituationDetail>[
         'Trẻ không định nghịch nước nóng, trẻ chỉ thích cảm giác được ấn nút hoặc gạt cần. Hãy luôn bật khóa an toàn trẻ em trên các thiết bị này.',
   ),
   _lesson(
-    situationId: 201,
-    islandId: 2,
+    situationId: 7,
+    islandId: 3,
     islandName: _socialSafetyIsland,
     title: 'Bài 1: Người lạ "biết tên bé"',
     intro:
@@ -151,9 +154,12 @@ final offlineSituationDetails = <SituationDetail>[
         'Nếu một người lạ gọi đúng tên con và bảo lên xe để chở về với bố mẹ, con có đi theo không?',
     riskAlert:
         'Bé rất dễ mất cảnh giác khi người lạ ăn mặc đẹp, tỏ ra thân thiện và biết rõ tên bé.',
-    introMedia: 'https://res.cloudinary.com/dtm5a4bwr/video/upload/v1781136847/Safety_stranger_Intro_chanol.mp4',
-    wrongMedia: 'https://res.cloudinary.com/dtm5a4bwr/video/upload/v1781136791/Safety_stranger_wrong_dgsjbj.mp4',
-    correctMedia: 'https://res.cloudinary.com/dtm5a4bwr/video/upload/v1781136761/Safety_stranger_correct_rkwehk.mp4',
+    introMedia:
+        'https://res.cloudinary.com/dtm5a4bwr/video/upload/v1781136847/Safety_stranger_Intro_chanol.mp4',
+    wrongMedia:
+        'https://res.cloudinary.com/dtm5a4bwr/video/upload/v1781136791/Safety_stranger_wrong_dgsjbj.mp4',
+    correctMedia:
+        'https://res.cloudinary.com/dtm5a4bwr/video/upload/v1781136761/Safety_stranger_correct_rkwehk.mp4',
     questionVoice: 'assets/voices/Safety_stranger/question_l3.mp3',
     optionAVoice: 'assets/voices/Safety_stranger/wrong_l3.mp3',
     optionBVoice: 'assets/voices/Safety_stranger/correct_l3.mp3',
@@ -161,8 +167,8 @@ final offlineSituationDetails = <SituationDetail>[
     optionBImage: 'assets/images/flashCard/Safety_stranger/Correct.webp',
   ),
   _lesson(
-    situationId: 202,
-    islandId: 2,
+    situationId: 8,
+    islandId: 3,
     islandName: _socialSafetyIsland,
     title: 'Bài 2: Lời thách đố của bạn bè',
     intro:
@@ -189,8 +195,8 @@ final offlineSituationDetails = <SituationDetail>[
         'Ở độ tuổi này, bé rất sợ bị bạn bè chê cười hoặc tẩy chay, nên dễ nhắm mắt làm liều.',
   ),
   _lesson(
-    situationId: 203,
-    islandId: 2,
+    situationId: 9,
+    islandId: 3,
     islandName: _socialSafetyIsland,
     title: 'Bài 3: Chiếc ví bị đánh rơi',
     intro:
@@ -216,8 +222,8 @@ final offlineSituationDetails = <SituationDetail>[
         'Bé dễ bị cám dỗ bởi suy nghĩ "Không ai nhìn thấy thì không sao".',
   ),
   _lesson(
-    situationId: 301,
-    islandId: 3,
+    situationId: 4,
+    islandId: 2,
     islandName: _environmentSafetyIsland,
     title: 'Bài 1: Qua đường an toàn',
     intro: 'Bé học chờ đèn xanh, nắm tay người lớn và quan sát khi qua đường.',
@@ -237,9 +243,12 @@ final offlineSituationDetails = <SituationDetail>[
     skillDescription: 'Biết chờ đèn xanh trước khi qua đường.',
     practicePrompt: 'Đèn màu gì thì mình mới được đi qua đường hả con?',
     riskAlert: 'Bé vẫn hay quên nhìn hai bên trước khi qua đường.',
-    introMedia: 'https://res.cloudinary.com/dtm5a4bwr/video/upload/v1781136588/cross-road-intro_tnrhmy.mp4',
-    wrongMedia: 'https://res.cloudinary.com/dtm5a4bwr/video/upload/v1781136583/cross-road-wrong_fnc8fg.mp4',
-    correctMedia: 'https://res.cloudinary.com/dtm5a4bwr/video/upload/v1781136648/cross-road-correct_r36izw.mp4',
+    introMedia:
+        'https://res.cloudinary.com/dtm5a4bwr/video/upload/v1781136588/cross-road-intro_tnrhmy.mp4',
+    wrongMedia:
+        'https://res.cloudinary.com/dtm5a4bwr/video/upload/v1781136583/cross-road-wrong_fnc8fg.mp4',
+    correctMedia:
+        'https://res.cloudinary.com/dtm5a4bwr/video/upload/v1781136648/cross-road-correct_r36izw.mp4',
     questionVoice: 'assets/voices/Crossroad/Question.mp3',
     optionAVoice: 'assets/voices/Crossroad/wrong.mp3',
     optionBVoice: 'assets/voices/Crossroad/correct.mp3',
@@ -247,8 +256,8 @@ final offlineSituationDetails = <SituationDetail>[
     optionBImage: 'assets/images/flashCard/Crossroad/Correct.webp',
   ),
   _lesson(
-    situationId: 302,
-    islandId: 3,
+    situationId: 5,
+    islandId: 2,
     islandName: _environmentSafetyIsland,
     title: 'Bài 2: Bị lạc trong siêu thị',
     intro: 'Bé học đứng yên và tìm người lớn đáng tin cậy khi bị lạc.',
@@ -269,8 +278,8 @@ final offlineSituationDetails = <SituationDetail>[
     riskAlert: 'Bé vẫn chọn chạy đi tìm mẹ khi bị lạc.',
   ),
   _lesson(
-    situationId: 303,
-    islandId: 3,
+    situationId: 6,
+    islandId: 2,
     islandName: _environmentSafetyIsland,
     title: 'Bài 3: Hồ nước / hồ bơi',
     intro:
@@ -322,7 +331,8 @@ SituationDetail _lesson({
   String? optionAImage,
   String? optionBImage,
 }) {
-  final orderIndex = situationId % 100;
+  final orderIndex = ((situationId - 1) % 3) + 1;
+  final firstStepId = ((situationId - 1) * 4) + 1;
 
   return SituationDetail(
     situationId: situationId,
@@ -334,27 +344,27 @@ SituationDetail _lesson({
     status: 'Published',
     steps: [
       SituationStep(
-        stepId: situationId * 10 + 1,
+        stepId: firstStepId,
         stepType: 'Intro',
         orderIndex: 1,
         mediaUrl: introMedia,
         content: scenario,
       ),
       SituationStep(
-        stepId: situationId * 10 + 2,
+        stepId: firstStepId + 1,
         stepType: 'Flashcard',
         orderIndex: 2,
         content: 'A. $optionA B. $optionB',
       ),
       SituationStep(
-        stepId: situationId * 10 + 3,
+        stepId: firstStepId + 2,
         stepType: 'Story',
         orderIndex: 3,
         mediaUrl: wrongMedia,
         content: wrongStory,
       ),
       SituationStep(
-        stepId: situationId * 10 + 4,
+        stepId: firstStepId + 3,
         stepType: 'Result',
         orderIndex: 4,
         mediaUrl: correctMedia,

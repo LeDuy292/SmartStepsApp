@@ -1,3 +1,5 @@
+using System.Security.Claims;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using SmartStepsServer.Data;
@@ -7,6 +9,7 @@ using SmartStepsServer.Services;
 namespace SmartStepsServer.Controllers;
 
 [ApiController]
+[Authorize]
 [Route("api/learning-analysis/{childId:int}")]
 public sealed class LearningAnalysisController(
     ILearningAnalysisService learningAnalysisService,
@@ -24,6 +27,10 @@ public sealed class LearningAnalysisController(
         if (childId <= 0)
         {
             return BadRequest(new { message = "childId must be greater than 0." });
+        }
+        if (!await CanAccessChildAsync(childId, cancellationToken))
+        {
+            return Forbid();
         }
 
         var periodTo = EnsureUtc(request?.PeriodTo ?? DateTime.UtcNow);
@@ -54,6 +61,11 @@ public sealed class LearningAnalysisController(
         int childId,
         CancellationToken cancellationToken)
     {
+        if (!await CanAccessChildAsync(childId, cancellationToken))
+        {
+            return Forbid();
+        }
+
         var report = await dbContext.LearningReports
             .AsNoTracking()
             .Where(item => item.ChildId == childId)
@@ -87,6 +99,11 @@ public sealed class LearningAnalysisController(
         [FromQuery] string status = "Pending",
         CancellationToken cancellationToken = default)
     {
+        if (!await CanAccessChildAsync(childId, cancellationToken))
+        {
+            return Forbid();
+        }
+
         var normalizedStatus = status.Trim();
         if (normalizedStatus is not ("Pending" or "Completed" or "Dismissed"))
         {
@@ -129,6 +146,11 @@ public sealed class LearningAnalysisController(
         [FromBody] ParentReviewRequest? request,
         CancellationToken cancellationToken)
     {
+        if (!await CanAccessChildAsync(childId, cancellationToken))
+        {
+            return Forbid();
+        }
+
         var childExists = await dbContext.Users.AnyAsync(user => user.UserId == childId, cancellationToken);
         var situation = await dbContext.Situations
             .Where(item => item.SituationId == situationId && item.Status == "Published")
@@ -190,6 +212,11 @@ public sealed class LearningAnalysisController(
         [FromBody] UpdateRecommendationRequest request,
         CancellationToken cancellationToken)
     {
+        if (!await CanAccessChildAsync(childId, cancellationToken))
+        {
+            return Forbid();
+        }
+
         var normalizedStatus = request.Status?.Trim();
         if (normalizedStatus is not ("Completed" or "Dismissed"))
         {
@@ -218,6 +245,25 @@ public sealed class LearningAnalysisController(
             DateTimeKind.Local => value.ToUniversalTime(),
             _ => DateTime.SpecifyKind(value, DateTimeKind.Utc),
         };
+    }
+
+    private async Task<bool> CanAccessChildAsync(int childId, CancellationToken cancellationToken)
+    {
+        var userIdValue = User.FindFirstValue("UserId") ??
+            User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (!int.TryParse(userIdValue, out var userId))
+        {
+            return false;
+        }
+
+        if (userId == childId || User.IsInRole("Admin"))
+        {
+            return true;
+        }
+
+        return await dbContext.Users.AsNoTracking().AnyAsync(
+            child => child.UserId == childId && child.ParentId == userId,
+            cancellationToken);
     }
 }
 

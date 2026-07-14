@@ -34,11 +34,18 @@
 
   <!-- GA4_SCRIPT_PLACEHOLDER -->
 
-  <script defer src="/_vercel/insights/script.js"></script>
   <script>
     window.si = window.si || function () { (window.siq = window.siq || []).push(arguments); };
+    const isLocalhost = ['localhost', '127.0.0.1'].includes(window.location.hostname);
+    if (!isLocalhost) {
+      ['/_vercel/insights/script.js', '/_vercel/speed-insights/script.js'].forEach((src) => {
+        const script = document.createElement('script');
+        script.src = src;
+        script.defer = true;
+        document.head.appendChild(script);
+      });
+    }
   </script>
-  <script defer src="/_vercel/speed-insights/script.js"></script>
 </head>
 <body>
   <!--

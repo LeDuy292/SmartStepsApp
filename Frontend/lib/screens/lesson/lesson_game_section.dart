@@ -64,6 +64,8 @@ class SafetyLesson {
   const SafetyLesson({
     required this.id,
     required this.situationId,
+    required this.flashcardId,
+    required this.flashcardStepId,
     required this.islandId,
     required this.islandName,
     required this.title,
@@ -89,6 +91,8 @@ class SafetyLesson {
 
   final String id;
   final int situationId;
+  final int flashcardId;
+  final int flashcardStepId;
   final int islandId;
   final String islandName;
   final String title;
@@ -161,6 +165,7 @@ class LessonChoice {
     required this.voice,
     required this.tone,
     required this.isCorrect,
+    required this.answerValue,
   });
 
   final String id;
@@ -171,6 +176,7 @@ class LessonChoice {
   final LessonVoice voice;
   final ChoiceTone tone;
   final bool isCorrect;
+  final String answerValue;
 }
 
 class ParentNotes {
@@ -205,6 +211,8 @@ SafetyLesson _lessonFromSituation(SituationDetail situation) {
   return SafetyLesson(
     id: 'situation-${situation.situationId}',
     situationId: situation.situationId,
+    flashcardId: flashcard?.flashcardId ?? 0,
+    flashcardStepId: flashcardStep?.stepId ?? 0,
     islandId: situation.islandId,
     islandName: situation.islandName,
     title: situation.title,
@@ -262,6 +270,7 @@ SafetyLesson _lessonFromSituation(SituationDetail situation) {
         voiceUrl: flashcard?.optionAVoiceUrl,
         imageAsset: flashcard?.optionAImageUrl,
         isCorrect: correctAnswer == 'A',
+        answerValue: 'A',
       ),
       _choiceFromFlashcard(
         id: choiceBId,
@@ -269,6 +278,7 @@ SafetyLesson _lessonFromSituation(SituationDetail situation) {
         voiceUrl: flashcard?.optionBVoiceUrl,
         imageAsset: flashcard?.optionBImageUrl,
         isCorrect: correctAnswer == 'B',
+        answerValue: 'B',
       ),
     ],
     parentNotes: ParentNotes(
@@ -316,6 +326,7 @@ LessonChoice _choiceFromFlashcard({
   required String? voiceUrl,
   required String? imageAsset,
   required bool isCorrect,
+  required String answerValue,
 }) {
   return LessonChoice(
     id: id,
@@ -328,6 +339,7 @@ LessonChoice _choiceFromFlashcard({
     voice: LessonVoice(asset: voiceUrl ?? '', text: label),
     tone: isCorrect ? ChoiceTone.safe : ChoiceTone.danger,
     isCorrect: isCorrect,
+    answerValue: answerValue,
   );
 }
 
@@ -592,6 +604,7 @@ class LessonGameScreen extends StatefulWidget {
 }
 
 class _LessonGameScreenState extends State<LessonGameScreen> {
+  final LearningService _learningService = LearningService();
   late LessonPhase _phase;
   String? _selectedChoiceId;
   bool _parentReadingMode = false;
@@ -624,6 +637,7 @@ class _LessonGameScreenState extends State<LessonGameScreen> {
     super.initState();
     _phase = _initialLessonPhase;
     unawaited(_enterLessonViewingMode());
+    unawaited(_syncLessonStart());
   }
 
   LessonPhase get _initialLessonPhase {
@@ -729,6 +743,10 @@ class _LessonGameScreenState extends State<LessonGameScreen> {
     if (shouldShowReward) {
       _showReward();
     }
+
+    if (_phase == LessonPhase.inspectObject) {
+      unawaited(_syncCurrentStep(widget.lesson.flashcardStepId));
+    }
   }
 
   void _inspectObject() {
@@ -738,6 +756,7 @@ class _LessonGameScreenState extends State<LessonGameScreen> {
     setState(() {
       _phase = LessonPhase.inspectObject;
     });
+    unawaited(_syncCurrentStep(widget.lesson.flashcardStepId));
   }
 
   void _selectChoice(String choiceId) {
@@ -756,6 +775,14 @@ class _LessonGameScreenState extends State<LessonGameScreen> {
           ? LessonPhase.correctVideo
           : LessonPhase.wrongVideo;
     });
+    unawaited(_syncAnswer(selectedChoice));
+    unawaited(
+      _syncCurrentStep(
+        selectedChoice.isCorrect
+            ? widget.lesson.videoCorrect.stepId
+            : widget.lesson.videoWrong.stepId,
+      ),
+    );
   }
 
   void _completeMiniChallenge() {
@@ -771,6 +798,7 @@ class _LessonGameScreenState extends State<LessonGameScreen> {
       _selectedChoiceId = null;
       _phase = LessonPhase.inspectObject;
     });
+    unawaited(_syncCurrentStep(widget.lesson.flashcardStepId));
   }
 
   void _showReward() {
@@ -784,6 +812,13 @@ class _LessonGameScreenState extends State<LessonGameScreen> {
   }
 
   Future<void> _recordLessonCompletion() async {
+    try {
+      await _learningService.completeSituation(widget.lesson.situationId);
+    } catch (error, stackTrace) {
+      debugPrint('SmartSteps backend completion sync failed: $error');
+      debugPrintStack(stackTrace: stackTrace);
+    }
+
     final profileStorage = widget.profileStorage;
     if (profileStorage == null) {
       return;
@@ -821,6 +856,45 @@ class _LessonGameScreenState extends State<LessonGameScreen> {
       );
     } catch (error, stackTrace) {
       debugPrint('SmartSteps lesson completion save failed: $error');
+      debugPrintStack(stackTrace: stackTrace);
+    }
+  }
+
+  Future<void> _syncLessonStart() async {
+    try {
+      await _learningService.startSituation(widget.lesson.situationId);
+    } catch (error, stackTrace) {
+      debugPrint('SmartSteps backend lesson start sync failed: $error');
+      debugPrintStack(stackTrace: stackTrace);
+    }
+  }
+
+  Future<void> _syncCurrentStep(int? stepId) async {
+    if (stepId == null || stepId <= 0) {
+      return;
+    }
+    try {
+      await _learningService.updateCurrentStep(
+        situationId: widget.lesson.situationId,
+        stepId: stepId,
+      );
+    } catch (error, stackTrace) {
+      debugPrint('SmartSteps backend step sync failed: $error');
+      debugPrintStack(stackTrace: stackTrace);
+    }
+  }
+
+  Future<void> _syncAnswer(LessonChoice choice) async {
+    if (widget.lesson.flashcardId <= 0) {
+      return;
+    }
+    try {
+      await _learningService.recordAnswer(
+        flashcardId: widget.lesson.flashcardId,
+        selectedAnswer: choice.answerValue,
+      );
+    } catch (error, stackTrace) {
+      debugPrint('SmartSteps backend answer sync failed: $error');
       debugPrintStack(stackTrace: stackTrace);
     }
   }
@@ -1086,7 +1160,9 @@ class _TemplateMiniChallengeScreenState
 
   Future<void> _playInstruction() async {
     try {
-      await _instructionPlayer.play(AssetSource('voices/voice_intro_minigame_arrange.mp3'));
+      await _instructionPlayer.play(
+        AssetSource('voices/voice_intro_minigame_arrange.mp3'),
+      );
     } catch (e) {
       debugPrint('Error playing minigame arrange instruction voice: $e');
     }
@@ -1154,8 +1230,9 @@ class _TemplateMiniChallengeScreenState
       await _instructionPlayer.stop();
     } catch (_) {}
 
-    final text = '${widget.lesson.title} ${widget.lesson.mission} ${widget.lesson.topic}'
-        .toLowerCase();
+    final text =
+        '${widget.lesson.title} ${widget.lesson.mission} ${widget.lesson.topic}'
+            .toLowerCase();
     String fileName;
     if (text.contains('người lạ')) {
       fileName = 'voice_correct_arrange_stranger.mp3';
@@ -1228,23 +1305,30 @@ class _TemplateMiniChallengeScreenState
                         const SizedBox(height: 14),
                         const SizedBox(height: 18),
                         for (final step in _options) ...[
-                          Builder(builder: (context) {
-                            final selIndex = _selectedIds.indexOf(step.id);
-                            final selectedNumber = selIndex != -1 ? selIndex + 1 : null;
-                            
-                            final correctIndex = _steps.indexWhere((item) => item.id == step.id);
-                            final isCorrectPosition = _hasChecked && selectedNumber != null
-                                ? selIndex == correctIndex
-                                : null;
+                          Builder(
+                            builder: (context) {
+                              final selIndex = _selectedIds.indexOf(step.id);
+                              final selectedNumber = selIndex != -1
+                                  ? selIndex + 1
+                                  : null;
 
-                            return _MiniChallengeStepButton(
-                              step: step,
-                              isSelected: selectedNumber != null,
-                              selectedIndex: selectedNumber,
-                              isCorrectPosition: isCorrectPosition,
-                              onPressed: () => _selectStep(step),
-                            );
-                          }),
+                              final correctIndex = _steps.indexWhere(
+                                (item) => item.id == step.id,
+                              );
+                              final isCorrectPosition =
+                                  _hasChecked && selectedNumber != null
+                                  ? selIndex == correctIndex
+                                  : null;
+
+                              return _MiniChallengeStepButton(
+                                step: step,
+                                isSelected: selectedNumber != null,
+                                selectedIndex: selectedNumber,
+                                isCorrectPosition: isCorrectPosition,
+                                onPressed: () => _selectStep(step),
+                              );
+                            },
+                          ),
                           const SizedBox(height: 12),
                         ],
                         if (!isWrong)
@@ -1344,36 +1428,30 @@ class _MiniChallengeStepButton extends StatelessWidget {
                 children: [
                   Container(
                     height: 128,
-                    color: isSelected ? const Color(0xFFDCDAD0) : step.background,
+                    color: isSelected
+                        ? const Color(0xFFDCDAD0)
+                        : step.background,
                     child: Stack(
                       fit: StackFit.expand,
                       children: [
                         if (step.imagePath != null)
-                          Image.asset(
-                            step.imagePath!,
-                            fit: BoxFit.cover,
-                          )
+                          Image.asset(step.imagePath!, fit: BoxFit.cover)
                         else
                           Center(
-                            child: Icon(
-                              step.icon,
-                              color: step.color,
-                              size: 40,
-                            ),
+                            child: Icon(step.icon, color: step.color, size: 40),
                           ),
                         if (isCorrectPosition == true)
-                          Container(
-                            color: const Color(0x1A006E1C),
-                          )
+                          Container(color: const Color(0x1A006E1C))
                         else if (isCorrectPosition == false)
-                          Container(
-                            color: const Color(0x1A93000A),
-                          ),
+                          Container(color: const Color(0x1A93000A)),
                       ],
                     ),
                   ),
                   Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 10,
+                      horizontal: 16,
+                    ),
                     child: Text(
                       step.label,
                       textAlign: TextAlign.center,
@@ -1518,10 +1596,7 @@ class _MiniChallengeActions extends StatelessWidget {
         ],
       ),
       child: showRetry
-          ? DuoPrimaryButton(
-              label: 'Thử lại',
-              onPressed: onRetry,
-            )
+          ? DuoPrimaryButton(label: 'Thử lại', onPressed: onRetry)
           : Row(
               children: [
                 SmartStepsPressEffect(
@@ -1547,7 +1622,9 @@ class _MiniChallengeActions extends StatelessWidget {
                 Expanded(
                   child: DuoPrimaryButton(
                     label: isCorrect ? 'Nhận thưởng' : 'Kiểm tra',
-                    onPressed: isCorrect ? onContinue : (canCheck ? onCheck : null),
+                    onPressed: isCorrect
+                        ? onContinue
+                        : (canCheck ? onCheck : null),
                   ),
                 ),
               ],
@@ -1673,7 +1750,9 @@ class _TemplateObserveScreenState extends State<_TemplateObserveScreen> {
 
   Future<void> _playInstruction() async {
     try {
-      await _instructionPlayer.play(AssetSource('voices/voice_intro_minigame_fidning.mp3'));
+      await _instructionPlayer.play(
+        AssetSource('voices/voice_intro_minigame_fidning.mp3'),
+      );
     } catch (e) {
       debugPrint('Error playing minigame finding instruction voice: $e');
     }
@@ -2277,7 +2356,7 @@ class _TemplateObserveActions extends StatelessWidget {
 _TemplateObserveSceneConfig _templateObserveSceneConfigFor(
   SafetyLesson lesson,
 ) {
-  if (lesson.situationId == 201) {
+  if (lesson.situationId == 7) {
     return const _TemplateObserveSceneConfig(
       backgroundAsset: 'assets/images/flashCard/Safety_stranger/step-one.webp',
       items: [
@@ -2303,7 +2382,7 @@ _TemplateObserveSceneConfig _templateObserveSceneConfigFor(
     );
   }
 
-  if (lesson.situationId == 301) {
+  if (lesson.situationId == 4) {
     return const _TemplateObserveSceneConfig(
       backgroundAsset: 'assets/images/flashCard/Crossroad/step-one.webp',
       items: [
