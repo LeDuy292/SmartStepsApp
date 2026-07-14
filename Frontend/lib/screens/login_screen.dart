@@ -9,7 +9,7 @@ import '../services/local_profile_storage.dart';
 import '../services/auth_service.dart';
 import '../widgets/google_auth_button.dart';
 import 'register_screen.dart';
-import 'admin_dashboard_screen.dart';
+import 'admin/admin_layout.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({
@@ -56,18 +56,18 @@ class _LoginScreenState extends State<LoginScreen> {
       _isLoading = true;
     });
 
-    final success = await _authService.processGoogleUser(account);
+    final errorMessage = await _authService.processGoogleUser(account);
 
     if (!mounted) return;
 
-    if (success) {
+    if (errorMessage == null) {
       await _checkRoleAndRoute();
     } else {
       setState(() {
         _isLoading = false;
       });
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Đăng nhập Google thất bại.')),
+        SnackBar(content: Text(errorMessage)),
       );
     }
   }
@@ -95,18 +95,18 @@ class _LoginScreenState extends State<LoginScreen> {
       _isLoading = true;
     });
 
-    final success = await _authService.login(email, password);
+    final errorMessage = await _authService.login(email, password);
 
     if (!mounted) return;
 
-    if (success) {
+    if (errorMessage == null) {
       await _checkRoleAndRoute();
     } else {
       setState(() {
         _isLoading = false;
       });
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Đăng nhập thất bại. Vui lòng kiểm tra lại.')),
+        SnackBar(content: Text(errorMessage)),
       );
     }
   }
@@ -116,18 +116,18 @@ class _LoginScreenState extends State<LoginScreen> {
       _isLoading = true;
     });
 
-    final success = await _authService.loginWithGoogle();
+    final errorMessage = await _authService.loginWithGoogle();
 
     if (!mounted) return;
 
-    if (success) {
+    if (errorMessage == null) {
       await _checkRoleAndRoute();
     } else {
       setState(() {
         _isLoading = false;
       });
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Đăng nhập Google thất bại hoặc đã bị hủy.')),
+        SnackBar(content: Text(errorMessage)),
       );
     }
   }
@@ -138,7 +138,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
     if (role == 'Admin') {
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const AdminDashboardScreen()),
+        MaterialPageRoute(builder: (_) => const AdminLayout()),
       );
     } else {
       widget.onLogin(context);
