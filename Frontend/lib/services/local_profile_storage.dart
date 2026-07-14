@@ -2,9 +2,12 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
+import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/app_feedback.dart';
 import '../models/child_profile.dart';
+import '../utils/constants.dart';
 import 'platform_storage.dart';
 
 class LocalProfileStorage {
@@ -22,6 +25,13 @@ class LocalProfileStorage {
 
   Future<ChildProfile?> readProfile() async {
     try {
+      final remote = await _readRemoteProfile();
+      if (remote.wasAuthenticated && remote.completed) {
+        if (remote.profile != null) {
+          await _writeLocalProfile(remote.profile!);
+        }
+        return remote.profile;
+      }
       final content = await _storage.readString('child_profile');
       if (content == null) {
         return null;
@@ -41,6 +51,11 @@ class LocalProfileStorage {
   }
 
   Future<void> saveProfile(ChildProfile profile) async {
+    await _writeLocalProfile(profile);
+    await _saveRemoteProfile(profile);
+  }
+
+  Future<void> _writeLocalProfile(ChildProfile profile) async {
     const encoder = JsonEncoder.withIndent('  ');
     await _storage.writeString(
       'child_profile',
@@ -184,6 +199,103 @@ class LocalProfileStorage {
         lastFeedbackAt: feedback.submittedAt,
       ),
     );
+    await _saveRemoteFeedback(feedback);
+  }
+
+  String get _apiBaseUrl {
+    final configured = AppConstants.apiBaseUrl.trim();
+    if (configured.isNotEmpty) {
+      return configured.replaceFirst(RegExp(r'/$'), '');
+    }
+    return kIsWeb ? 'http://localhost:8080' : 'http://10.0.2.2:8080';
+  }
+
+  Future<String?> _token() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString('jwt_token');
+  }
+
+  Future<_RemoteProfileResult> _readRemoteProfile() async {
+    final token = await _token();
+    if (token == null || token.isEmpty) return const _RemoteProfileResult();
+    try {
+      final response = await http.get(
+        Uri.parse('$_apiBaseUrl/api/profile'),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+      if (response.statusCode == 404) {
+        return const _RemoteProfileResult(
+          wasAuthenticated: true,
+          completed: true,
+        );
+      }
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        return const _RemoteProfileResult(wasAuthenticated: true);
+      }
+      final payload = jsonDecode(response.body);
+      if (payload is! Map<String, dynamic>) {
+        return const _RemoteProfileResult(wasAuthenticated: true);
+      }
+      return _RemoteProfileResult(
+        wasAuthenticated: true,
+        completed: true,
+        profile: ChildProfile.fromJson(payload),
+      );
+    } catch (error) {
+      debugPrint('SmartSteps remote profile read failed: $error');
+      return const _RemoteProfileResult(wasAuthenticated: true);
+    }
+  }
+
+  Future<void> _saveRemoteProfile(ChildProfile profile) async {
+    final token = await _token();
+    if (token == null || token.isEmpty) return;
+    try {
+      final response = await http.put(
+        Uri.parse('$_apiBaseUrl/api/profile'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode(profile.toJson()),
+      );
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        debugPrint(
+          'SmartSteps remote profile save returned ${response.statusCode}.',
+        );
+      }
+    } catch (error) {
+      debugPrint('SmartSteps remote profile save failed: $error');
+    }
+  }
+
+  Future<void> _saveRemoteFeedback(AppFeedbackEntry feedback) async {
+    final token = await _token();
+    if (token == null || token.isEmpty) return;
+    try {
+      final response = await http.post(
+        Uri.parse('$_apiBaseUrl/api/feedback'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({
+          'clientId': feedback.id,
+          'source': feedback.source,
+          'submittedAt': feedback.submittedAt.toUtc().toIso8601String(),
+          'experienceRating': feedback.experienceRating,
+          'childEngagementRating': feedback.childEngagementRating,
+          'effectivenessRating': feedback.effectivenessRating,
+          'ageFit': feedback.ageFit,
+          'improvementNote': feedback.improvementNote,
+        }),
+      );
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        debugPrint('SmartSteps feedback API returned ${response.statusCode}.');
+      }
+    } catch (error) {
+      debugPrint('SmartSteps feedback API failed: $error');
+    }
   }
 
   Future<AppFeedbackPromptState> readFeedbackPromptState() async {
@@ -246,6 +358,18 @@ class LocalProfileStorage {
       encoder.convert(promptState.toJson()),
     );
   }
+}
+
+class _RemoteProfileResult {
+  const _RemoteProfileResult({
+    this.wasAuthenticated = false,
+    this.completed = false,
+    this.profile,
+  });
+
+  final bool wasAuthenticated;
+  final bool completed;
+  final ChildProfile? profile;
 }
 
 const premiumActivationCode = 'PREMIUM';

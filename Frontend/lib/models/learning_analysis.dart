@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 class LearningAnalysis {
   const LearningAnalysis({
     required this.hasEnoughData,
@@ -45,6 +47,29 @@ class LearningAnalysis {
     );
   }
 
+  factory LearningAnalysis.fromStoredReport(Map<String, dynamic> json) {
+    final totalLessons = _int(json['totalLessons']);
+    final completedLessons = _int(json['completedLessons']);
+    return LearningAnalysis(
+      hasEnoughData: true,
+      message: '',
+      reportId: _nullableInt(json['reportId']),
+      childId: _int(json['childId']),
+      totalLessons: totalLessons,
+      completedLessons: completedLessons,
+      completionRate: totalLessons == 0 ? 0 : completedLessons / totalLessons,
+      totalAnswers: 0,
+      correctAnswers: 0,
+      correctRate: _double(json['correctRate']),
+      activeDays: 0,
+      summary: _string(json['summary']),
+      skills: const [],
+      recommendations: const [],
+      parentAdvice: _storedStringList(json['parentAdvice']),
+      narrativeSource: 'StoredReport',
+    );
+  }
+
   final bool hasEnoughData;
   final String message;
   final int? reportId;
@@ -61,6 +86,27 @@ class LearningAnalysis {
   final List<LearningRecommendation> recommendations;
   final List<String> parentAdvice;
   final String narrativeSource;
+
+  LearningAnalysis copyWithRecommendations(List<LearningRecommendation> value) {
+    return LearningAnalysis(
+      hasEnoughData: hasEnoughData,
+      message: message,
+      reportId: reportId,
+      childId: childId,
+      totalLessons: totalLessons,
+      completedLessons: completedLessons,
+      completionRate: completionRate,
+      totalAnswers: totalAnswers,
+      correctAnswers: correctAnswers,
+      correctRate: correctRate,
+      activeDays: activeDays,
+      summary: summary,
+      skills: skills,
+      recommendations: value,
+      parentAdvice: parentAdvice,
+      narrativeSource: narrativeSource,
+    );
+  }
 }
 
 class LearningSkillAssessment {
@@ -144,4 +190,25 @@ int? _nullableInt(Object? value) {
 double _double(Object? value) {
   if (value is num) return value.toDouble();
   return double.tryParse(value?.toString() ?? '') ?? 0;
+}
+
+List<String> _storedStringList(Object? value) {
+  if (value is List) {
+    return value
+        .map((item) => '$item'.trim())
+        .where((item) => item.isNotEmpty)
+        .toList(growable: false);
+  }
+  final text = value?.toString().trim() ?? '';
+  if (text.isEmpty) return const [];
+  try {
+    final decoded = jsonDecode(text);
+    if (decoded is List) {
+      return decoded
+          .map((item) => '$item'.trim())
+          .where((item) => item.isNotEmpty)
+          .toList(growable: false);
+    }
+  } catch (_) {}
+  return [text];
 }

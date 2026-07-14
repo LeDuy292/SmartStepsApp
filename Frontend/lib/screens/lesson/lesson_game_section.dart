@@ -585,6 +585,7 @@ class LessonGameScreen extends StatefulWidget {
   const LessonGameScreen({
     super.key,
     required this.lesson,
+    this.initialStepId,
     this.profileStorage,
     this.onLessonCompleted,
     required this.isLastLesson,
@@ -593,6 +594,7 @@ class LessonGameScreen extends StatefulWidget {
   });
 
   final SafetyLesson lesson;
+  final int? initialStepId;
   final LocalProfileStorage? profileStorage;
   final ValueChanged<ChildProfile>? onLessonCompleted;
   final bool isLastLesson;
@@ -641,6 +643,9 @@ class _LessonGameScreenState extends State<LessonGameScreen> {
   }
 
   LessonPhase get _initialLessonPhase {
+    if (widget.initialStepId == widget.lesson.flashcardStepId) {
+      return LessonPhase.inspectObject;
+    }
     return _usesTemplateLesson ? LessonPhase.opening : LessonPhase.introVideo;
   }
 

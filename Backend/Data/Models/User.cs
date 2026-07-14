@@ -32,6 +32,8 @@ public class User
 
     public int? ParentId { get; set; }
 
+    public string? ProfileJson { get; set; }
+
     public DateTime CreatedAt { get; set; }
 
     public DateTime? UpdatedAt { get; set; }
@@ -53,4 +55,5 @@ public class User
         new List<LessonRecommendation>();
     public ICollection<SkillAssessment> SkillAssessments { get; set; } = new List<SkillAssessment>();
     public ICollection<AIAnalysisLog> AIAnalysisLogs { get; set; } = new List<AIAnalysisLog>();
+    public ICollection<AppFeedback> AppFeedbackEntries { get; set; } = new List<AppFeedback>();
 }

@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
 import '../models/learning_analysis.dart';
+import '../models/learning_progress.dart';
 import '../utils/constants.dart';
 import 'auth_service.dart';
 
@@ -77,6 +78,72 @@ class LearningService {
     );
   }
 
+  Future<LearningProgress> getProgress() async {
+    final session = await _session();
+    final uri = Uri.parse(
+      '$_baseUrl/api/progress',
+    ).replace(queryParameters: {'userEmail': session.email});
+    final response = await _sendUri('GET', uri, session);
+    final payload = jsonDecode(response.body);
+    if (payload is! Map<String, dynamic>) {
+      throw const LearningServiceException('Invalid progress response.');
+    }
+    return LearningProgress.fromJson(payload);
+  }
+
+  Future<LearningAnalysis?> getLatestReport() async {
+    final session = await _session();
+    final response = await _send(
+      'GET',
+      '/api/learning-analysis/${session.userId}/reports/latest',
+      session,
+      allowNotFound: true,
+    );
+    if (response.statusCode == 404) return null;
+    final payload = jsonDecode(response.body);
+    if (payload is! Map<String, dynamic>) {
+      throw const LearningServiceException('Invalid stored report response.');
+    }
+    return LearningAnalysis.fromStoredReport(payload);
+  }
+
+  Future<List<LearningRecommendation>> getRecommendations() async {
+    final session = await _session();
+    final response = await _send(
+      'GET',
+      '/api/learning-analysis/${session.userId}/recommendations?status=Pending',
+      session,
+    );
+    final payload = jsonDecode(response.body);
+    if (payload is! List) {
+      throw const LearningServiceException('Invalid recommendations response.');
+    }
+    return payload
+        .whereType<Map<String, dynamic>>()
+        .map(LearningRecommendation.fromJson)
+        .toList(growable: false);
+  }
+
+  Future<void> requestReview(int situationId, {String? reason}) async {
+    final session = await _session();
+    await _send(
+      'POST',
+      '/api/learning-analysis/${session.userId}/recommendations/$situationId/review',
+      session,
+      body: {'reason': reason},
+    );
+  }
+
+  Future<void> updateRecommendation(int recommendationId, String status) async {
+    final session = await _session();
+    await _send(
+      'PATCH',
+      '/api/learning-analysis/${session.userId}/recommendations/$recommendationId',
+      session,
+      body: {'status': status},
+    );
+  }
+
   Future<LearningAnalysis> generateReport() async {
     final session = await _session();
     final response = await _send(
@@ -109,8 +176,25 @@ class LearningService {
     String path,
     _LearningSession session, {
     Map<String, Object?>? body,
+    bool allowNotFound = false,
   }) async {
-    final request = http.Request(method, Uri.parse('$_baseUrl$path'))
+    return _sendUri(
+      method,
+      Uri.parse('$_baseUrl$path'),
+      session,
+      body: body,
+      allowNotFound: allowNotFound,
+    );
+  }
+
+  Future<http.Response> _sendUri(
+    String method,
+    Uri uri,
+    _LearningSession session, {
+    Map<String, Object?>? body,
+    bool allowNotFound = false,
+  }) async {
+    final request = http.Request(method, uri)
       ..headers.addAll({
         'Authorization': 'Bearer ${session.token}',
         'Content-Type': 'application/json',
@@ -120,7 +204,8 @@ class LearningService {
     }
     final streamed = await _client.send(request);
     final response = await http.Response.fromStream(streamed);
-    if (response.statusCode < 200 || response.statusCode >= 300) {
+    if ((response.statusCode < 200 || response.statusCode >= 300) &&
+        !(allowNotFound && response.statusCode == 404)) {
       String? serverMessage;
       try {
         final payload = jsonDecode(response.body);

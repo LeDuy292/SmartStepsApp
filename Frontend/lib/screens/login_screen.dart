@@ -44,7 +44,9 @@ class _LoginScreenState extends State<LoginScreen> {
         setState(() => _isGoogleReady = true);
       }
     });
-    _googleSignInSub = _authService.onGoogleUserChanged.listen((GoogleSignInAccount? account) {
+    _googleSignInSub = _authService.onGoogleUserChanged.listen((
+      GoogleSignInAccount? account,
+    ) {
       if (account != null && mounted) {
         _processWebGoogleLogin(account);
       }
@@ -106,7 +108,9 @@ class _LoginScreenState extends State<LoginScreen> {
         _isLoading = false;
       });
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Đăng nhập thất bại. Vui lòng kiểm tra lại.')),
+        const SnackBar(
+          content: Text('Đăng nhập thất bại. Vui lòng kiểm tra lại.'),
+        ),
       );
     }
   }
@@ -127,7 +131,9 @@ class _LoginScreenState extends State<LoginScreen> {
         _isLoading = false;
       });
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Đăng nhập Google thất bại hoặc đã bị hủy.')),
+        const SnackBar(
+          content: Text('Đăng nhập Google thất bại hoặc đã bị hủy.'),
+        ),
       );
     }
   }
@@ -138,7 +144,24 @@ class _LoginScreenState extends State<LoginScreen> {
 
     if (role == 'Admin') {
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const AdminDashboardScreen()),
+        MaterialPageRoute(
+          builder: (adminContext) => AdminDashboardScreen(
+            onLogout: () async {
+              await _authService.logout();
+              if (!adminContext.mounted) return;
+              Navigator.of(adminContext).pushAndRemoveUntil(
+                MaterialPageRoute(
+                  builder: (_) => LoginScreen(
+                    profileStorage: widget.profileStorage,
+                    onLogin: widget.onLogin,
+                    onRegistrationCompleted: widget.onRegistrationCompleted,
+                  ),
+                ),
+                (_) => false,
+              );
+            },
+          ),
+        ),
       );
     } else {
       widget.onLogin(context);
@@ -243,9 +266,10 @@ class _LoginScreenState extends State<LoginScreen> {
                                               animation,
                                               secondaryAnimation,
                                             ) => RegisterScreen(
-                                              profileStorage: widget.profileStorage,
-                                              onRegistrationCompleted:
-                                                  widget.onRegistrationCompleted,
+                                              profileStorage:
+                                                  widget.profileStorage,
+                                              onRegistrationCompleted: widget
+                                                  .onRegistrationCompleted,
                                             ),
                                         transitionsBuilder:
                                             (
@@ -298,7 +322,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                           const SizedBox(height: 13),
                           _LoginInput(
-                            label: 'Mật khẩu', 
+                            label: 'Mật khẩu',
                             obscure: true,
                             controller: _passwordController,
                           ),
@@ -347,11 +371,14 @@ class _LoginScreenState extends State<LoginScreen> {
                                     fontWeight: FontWeight.w700,
                                   ),
                                 ),
-                                child: _isLoading 
+                                child: _isLoading
                                     ? const SizedBox(
-                                        width: 24, 
-                                        height: 24, 
-                                        child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)
+                                        width: 24,
+                                        height: 24,
+                                        child: CircularProgressIndicator(
+                                          color: Colors.white,
+                                          strokeWidth: 2,
+                                        ),
                                       )
                                     : const Text('Đăng nhập'),
                               ),
@@ -364,15 +391,17 @@ class _LoginScreenState extends State<LoginScreen> {
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               kIsWeb
-                                  ? (_isGoogleReady 
-                                      ? buildWebGoogleAuthButton() 
-                                      : const SizedBox(
-                                          width: 42, 
-                                          height: 42, 
-                                          child: CircularProgressIndicator()
-                                        ))
+                                  ? (_isGoogleReady
+                                        ? buildWebGoogleAuthButton()
+                                        : const SizedBox(
+                                            width: 42,
+                                            height: 42,
+                                            child: CircularProgressIndicator(),
+                                          ))
                                   : GestureDetector(
-                                      onTap: _isLoading ? null : _handleGoogleLogin,
+                                      onTap: _isLoading
+                                          ? null
+                                          : _handleGoogleLogin,
                                       child: const _SocialButton(
                                         label: 'Google',
                                         child: Text(
@@ -452,7 +481,9 @@ void _showForgotPasswordDialog(BuildContext context) {
             ),
             actions: [
               TextButton(
-                onPressed: isSending ? null : () => Navigator.of(dialogContext).pop(),
+                onPressed: isSending
+                    ? null
+                    : () => Navigator.of(dialogContext).pop(),
                 child: const Text('Hủy'),
               ),
               ElevatedButton(
@@ -462,30 +493,40 @@ void _showForgotPasswordDialog(BuildContext context) {
                         final email = forgotEmailController.text.trim();
                         if (email.isEmpty || !email.contains('@')) {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Vui lòng nhập email hợp lệ.')),
+                            const SnackBar(
+                              content: Text('Vui lòng nhập email hợp lệ.'),
+                            ),
                           );
                           return;
                         }
                         setState(() => isSending = true);
-                        final success = await AuthService().forgotPassword(email);
+                        final success = await AuthService().forgotPassword(
+                          email,
+                        );
                         setState(() => isSending = false);
-                        
+
                         if (dialogContext.mounted) {
                           Navigator.of(dialogContext).pop();
                         }
-                        
+
                         if (context.mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
-                              content: Text(success 
-                                  ? 'Mật khẩu mới đã được gửi vào email của bạn.' 
-                                  : 'Có lỗi xảy ra. Kiểm tra lại email hoặc thử lại sau.'),
+                              content: Text(
+                                success
+                                    ? 'Mật khẩu mới đã được gửi vào email của bạn.'
+                                    : 'Có lỗi xảy ra. Kiểm tra lại email hoặc thử lại sau.',
+                              ),
                             ),
                           );
                         }
                       },
-                child: isSending 
-                    ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)) 
+                child: isSending
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
                     : const Text('Gửi'),
               ),
             ],
@@ -497,7 +538,11 @@ void _showForgotPasswordDialog(BuildContext context) {
 }
 
 class _LoginInput extends StatelessWidget {
-  const _LoginInput({required this.label, this.controller, this.obscure = false});
+  const _LoginInput({
+    required this.label,
+    this.controller,
+    this.obscure = false,
+  });
 
   final String label;
   final bool obscure;

@@ -29,6 +29,12 @@ public class AuthController : ControllerBase
     [HttpPost("register")]
     public async Task<IActionResult> Register([FromBody] RegisterRequest request)
     {
+        var publicRole = NormalizePublicRole(request.Role);
+        if (publicRole is null)
+        {
+            return BadRequest(new { Message = "Public registration only supports Child or Parent accounts." });
+        }
+
         var normalizedEmail = request.Email.Trim().ToLowerInvariant();
         var existingUser = await _context.Users
             .SingleOrDefaultAsync(user => user.Email.ToLower() == normalizedEmail);
@@ -47,7 +53,7 @@ public class AuthController : ControllerBase
             FullName = request.FullName,
             Email = normalizedEmail,
             Password = BCrypt.Net.BCrypt.HashPassword(request.Password),
-            Role = request.Role,
+            Role = publicRole,
             CreatedAt = DateTime.UtcNow
         };
 
@@ -84,6 +90,14 @@ public class AuthController : ControllerBase
     [HttpPost("google")]
     public async Task<IActionResult> GoogleLogin([FromBody] GoogleLoginRequest request)
     {
+        var publicRole = string.IsNullOrWhiteSpace(request.Role)
+            ? "Child"
+            : NormalizePublicRole(request.Role);
+        if (publicRole is null)
+        {
+            return BadRequest(new { Message = "Google registration only supports Child or Parent accounts." });
+        }
+
         try
         {
             var settings = new GoogleJsonWebSignature.ValidationSettings()
@@ -103,7 +117,7 @@ public class AuthController : ControllerBase
                     FullName = payload.Name,
                     Email = payload.Email,
                     Password = BCrypt.Net.BCrypt.HashPassword(Guid.NewGuid().ToString()), // Random password for google users
-                    Role = string.IsNullOrEmpty(request.Role) ? "Child" : request.Role, // Default to Child or requested role
+                    Role = publicRole,
                     CreatedAt = DateTime.UtcNow
                 };
 
@@ -186,5 +200,19 @@ public class AuthController : ControllerBase
 
         var token = tokenHandler.CreateToken(tokenDescriptor);
         return tokenHandler.WriteToken(token);
+    }
+
+    private static string? NormalizePublicRole(string? role)
+    {
+        var normalized = role?.Trim();
+        if (string.Equals(normalized, "Child", StringComparison.OrdinalIgnoreCase))
+        {
+            return "Child";
+        }
+        if (string.Equals(normalized, "Parent", StringComparison.OrdinalIgnoreCase))
+        {
+            return "Parent";
+        }
+        return null;
     }
 }
