@@ -58,7 +58,7 @@ public sealed class PayOsService : IPayOsService
             "/v2/payment-requests",
             payload);
 
-        using var response = await _httpClient.SendAsync(httpRequest, cancellationToken);
+        using var response = await SendAsync(httpRequest, "create a payment link", cancellationToken);
         var body = await response.Content.ReadAsStringAsync(cancellationToken);
 
         if (!response.IsSuccessStatusCode)
@@ -98,7 +98,18 @@ public sealed class PayOsService : IPayOsService
             HttpMethod.Get,
             $"/v2/payment-requests/{orderCode.ToString(CultureInfo.InvariantCulture)}");
 
-        using var response = await _httpClient.SendAsync(httpRequest, cancellationToken);
+        HttpResponseMessage response;
+        try
+        {
+            response = await _httpClient.SendAsync(httpRequest, cancellationToken);
+        }
+        catch (HttpRequestException exception)
+        {
+            _logger.LogWarning(exception, "payOS payment lookup could not reach the provider.");
+            return null;
+        }
+        using (response)
+        {
         var body = await response.Content.ReadAsStringAsync(cancellationToken);
 
         if (!response.IsSuccessStatusCode)
@@ -118,11 +129,12 @@ public sealed class PayOsService : IPayOsService
         }
 
         var data = root.GetProperty("data");
-        return new PayOsPaymentInfo(
-            GetInt64(data, "orderCode"),
-            GetInt32(data, "amount"),
-            GetString(data, "status") ?? string.Empty,
-            GetString(data, "id"));
+            return new PayOsPaymentInfo(
+                GetInt64(data, "orderCode"),
+                GetInt32(data, "amount"),
+                GetString(data, "status") ?? string.Empty,
+                GetString(data, "id"));
+        }
     }
 
     public bool VerifyPaymentWebhook(JsonElement data, string signature)
@@ -149,7 +161,7 @@ public sealed class PayOsService : IPayOsService
             "/confirm-webhook",
             new { webhookUrl });
 
-        using var response = await _httpClient.SendAsync(httpRequest, cancellationToken);
+        using var response = await SendAsync(httpRequest, "confirm the webhook URL", cancellationToken);
         var body = await response.Content.ReadAsStringAsync(cancellationToken);
 
         if (!response.IsSuccessStatusCode)
@@ -192,6 +204,22 @@ public sealed class PayOsService : IPayOsService
 
         request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
         return request;
+    }
+
+    private async Task<HttpResponseMessage> SendAsync(
+        HttpRequestMessage request,
+        string operation,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            return await _httpClient.SendAsync(request, cancellationToken);
+        }
+        catch (HttpRequestException exception)
+        {
+            _logger.LogWarning(exception, "payOS could not {Operation}.", operation);
+            throw new PayOsException($"Could not connect to payOS to {operation}.");
+        }
     }
 
     private void EnsureConfigured()

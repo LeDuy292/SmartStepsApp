@@ -802,7 +802,7 @@ class _SmartStepsCatalogPageState extends State<SmartStepsCatalogPage>
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     unawaited(_enterCatalogViewingMode());
-    unawaited(_loadProfile());
+    unawaited(_loadProfileAndPaymentReturn());
     unawaited(_loadCatalog());
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
@@ -909,6 +909,53 @@ class _SmartStepsCatalogPageState extends State<SmartStepsCatalogPage>
       _serverCompletedSituationIds = completed;
       _serverCurrentSteps = currentSteps;
     });
+  }
+
+  Future<void> _loadProfileAndPaymentReturn() async {
+    await _loadProfile();
+    if (!kIsWeb || !mounted) return;
+
+    final query = Uri.base.queryParameters;
+    final paymentResult = query['premiumPayment'];
+    final orderCode = int.tryParse(query['orderCode'] ?? '');
+    if (paymentResult == null) return;
+
+    if (paymentResult == 'cancel') {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Bạn đã hủy thanh toán Premium.')),
+      );
+      return;
+    }
+
+    if (paymentResult != 'success' || orderCode == null) return;
+
+    try {
+      final status = await PremiumService().confirmPayment(orderCode);
+      if (!status.hasPremium) {
+        throw const PremiumServiceException(
+          'PayOS chưa xác nhận giao dịch. Vui lòng thử lại sau ít phút.',
+        );
+      }
+
+      final current = await widget.profileStorage.readProfile();
+      if (current == null || !mounted) return;
+      final profile = current.copyWith(
+        isPremium: true,
+        premiumCode: status.planCode,
+        premiumActivatedAt: DateTime.now(),
+      );
+      await widget.profileStorage.saveProfile(profile);
+      if (!mounted) return;
+      setState(() => _profile = profile);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Thanh toán thành công. Đã mở khóa Premium!')),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Chưa xác nhận được thanh toán: $error')),
+      );
+    }
   }
 
   Future<void> _showPremiumOfferIfNeeded() async {
@@ -1681,6 +1728,7 @@ class _PremiumOfferDialogState extends State<_PremiumOfferDialog> {
   bool _isSubmitting = false;
   bool _showSuccess = false;
   String? _errorText;
+  int? _pendingOrderCode;
   Timer? _dismissTimer;
 
   @override
@@ -1779,13 +1827,48 @@ class _PremiumOfferDialogState extends State<_PremiumOfferDialog> {
     try {
       final service = PremiumService();
       final payment = await service.createPayment('PRO_MONTHLY');
-      if (payment.checkoutUrl.isNotEmpty) {
-        await launchUrl(
-          Uri.parse(payment.checkoutUrl),
-          mode: LaunchMode.externalApplication,
+      if (payment.checkoutUrl.isEmpty) {
+        throw const PremiumServiceException(
+          'Máy chủ không trả về trang thanh toán.',
         );
       }
-      final status = await service.confirmPayment(payment.orderCode);
+      final launched = await launchUrl(
+        Uri.parse(payment.checkoutUrl),
+        mode: kIsWeb
+            ? LaunchMode.platformDefault
+            : LaunchMode.externalApplication,
+      );
+      if (!launched) {
+        throw const PremiumServiceException(
+          'Không thể mở trang thanh toán PayOS.',
+        );
+      }
+      if (!mounted) return;
+      setState(() {
+        _pendingOrderCode = payment.orderCode;
+        _isSubmitting = false;
+        _errorText =
+            'Sau khi thanh toán, hãy quay lại và bấm “Kiểm tra thanh toán”.';
+      });
+    } catch (error) {
+      if (mounted) {
+        setState(() {
+          _isSubmitting = false;
+          _errorText = 'Không tạo được thanh toán: $error';
+        });
+      }
+    }
+  }
+
+  Future<void> _checkPayment() async {
+    final orderCode = _pendingOrderCode;
+    if (_isSubmitting || orderCode == null) return;
+    setState(() {
+      _isSubmitting = true;
+      _errorText = null;
+    });
+    try {
+      final status = await PremiumService().confirmPayment(orderCode);
       if (status.hasPremium) {
         final current = await widget.profileStorage.readProfile();
         if (current != null) {
@@ -1806,14 +1889,15 @@ class _PremiumOfferDialogState extends State<_PremiumOfferDialog> {
       } else if (mounted) {
         setState(() {
           _isSubmitting = false;
-          _errorText = 'Hãy hoàn tất thanh toán rồi thử lại.';
+          _errorText =
+              'PayOS chưa xác nhận giao dịch. Hãy hoàn tất thanh toán rồi thử lại.';
         });
       }
     } catch (error) {
       if (mounted) {
         setState(() {
           _isSubmitting = false;
-          _errorText = 'Không tạo được thanh toán: $error';
+          _errorText = 'Không kiểm tra được thanh toán: $error';
         });
       }
     }
@@ -1973,9 +2057,19 @@ class _PremiumOfferDialogState extends State<_PremiumOfferDialog> {
         ),
         const SizedBox(height: 10),
         OutlinedButton.icon(
-          onPressed: _isSubmitting ? null : _purchasePremium,
-          icon: const Icon(Icons.qr_code_rounded),
-          label: const Text('Thanh toán gói 1 tháng'),
+          onPressed: _isSubmitting
+              ? null
+              : (_pendingOrderCode == null ? _purchasePremium : _checkPayment),
+          icon: Icon(
+            _pendingOrderCode == null
+                ? Icons.qr_code_rounded
+                : Icons.refresh_rounded,
+          ),
+          label: Text(
+            _pendingOrderCode == null
+                ? 'Thanh toán gói 1 tháng'
+                : 'Kiểm tra thanh toán',
+          ),
           style: OutlinedButton.styleFrom(
             minimumSize: const Size(double.infinity, 52),
           ),
