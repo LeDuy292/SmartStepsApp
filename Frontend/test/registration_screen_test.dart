@@ -93,7 +93,10 @@ void main() {
 
   test('age validation only accepts children from 4 to 10', () {
     final tooYoung =
-        RegistrationViewModel(profileStorage: _CapturingProfileStorage())
+        RegistrationViewModel(
+            profileStorage: _CapturingProfileStorage(),
+            isSurveyOnly: true,
+          )
           ..updateName('Bé An')
           ..next()
           ..updateAge('3');
@@ -104,7 +107,10 @@ void main() {
     );
 
     final tooOld =
-        RegistrationViewModel(profileStorage: _CapturingProfileStorage())
+        RegistrationViewModel(
+            profileStorage: _CapturingProfileStorage(),
+            isSurveyOnly: true,
+          )
           ..updateName('Bé An')
           ..next()
           ..updateAge('11');
@@ -158,6 +164,10 @@ Future<void> _pumpRegistration(
       theme: DuoTheme.light,
       home: RegisterScreen(
         profileStorage: profileStorage,
+        viewModel: RegistrationViewModel(
+          profileStorage: profileStorage,
+          isSurveyOnly: true,
+        ),
         onRegistrationCompleted: onCompleted ?? (_) {},
       ),
     ),

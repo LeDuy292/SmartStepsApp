@@ -48,17 +48,25 @@ class _UserFormDialogState extends State<UserFormDialog> {
       } else {
         await _api.updateUser(widget.user!['userId'], data);
       }
-      if (mounted) Navigator.pop(context, true);
+      if (mounted) {
+        Navigator.pop(context, true);
+      }
     } catch (e) {
       setState(() => _isSaving = false);
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Lỗi: $e')));
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Lỗi: $e')));
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: Text(widget.user == null ? 'Thêm người dùng' : 'Chỉnh sửa người dùng'),
+      title: Text(
+        widget.user == null ? 'Thêm người dùng' : 'Chỉnh sửa người dùng',
+      ),
       content: SingleChildScrollView(
         child: Form(
           key: _formKey,
@@ -74,7 +82,8 @@ class _UserFormDialogState extends State<UserFormDialog> {
               TextFormField(
                 controller: _emailCtrl,
                 decoration: const InputDecoration(labelText: 'Email'),
-                validator: (v) => !v!.contains('@') ? 'Email không hợp lệ' : null,
+                validator: (v) =>
+                    !v!.contains('@') ? 'Email không hợp lệ' : null,
               ),
               if (widget.user == null) ...[
                 const SizedBox(height: 12),
@@ -87,7 +96,7 @@ class _UserFormDialogState extends State<UserFormDialog> {
               ],
               const SizedBox(height: 12),
               DropdownButtonFormField<String>(
-                value: _role,
+                initialValue: _role,
                 decoration: const InputDecoration(labelText: 'Vai trò'),
                 items: const [
                   DropdownMenuItem(value: 'Child', child: Text('Trẻ em')),
@@ -103,10 +112,22 @@ class _UserFormDialogState extends State<UserFormDialog> {
         ),
       ),
       actions: [
-        TextButton(onPressed: () => Navigator.pop(context), child: const Text('Hủy')),
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Hủy'),
+        ),
         FilledButton(
           onPressed: _isSaving ? null : _save,
-          child: _isSaving ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)) : const Text('Lưu'),
+          child: _isSaving
+              ? const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Colors.white,
+                  ),
+                )
+              : const Text('Lưu'),
         ),
       ],
     );

@@ -337,6 +337,13 @@ public sealed class MediaController : ControllerBase
             results.Add(new ValidationResult("Cloudinary:ResourceType must be 'video' for the current media pipeline."));
         }
 
+        var allowedDeliveryTypes = new[] { "upload", "private", "authenticated" };
+        if (!allowedDeliveryTypes.Contains(options.DeliveryType, StringComparer.OrdinalIgnoreCase))
+        {
+            results.Add(new ValidationResult(
+                "Cloudinary:DeliveryType must be 'upload', 'private', or 'authenticated'."));
+        }
+
         return results
             .Where(result => !string.IsNullOrWhiteSpace(result.ErrorMessage))
             .Select(result => result.ErrorMessage!)

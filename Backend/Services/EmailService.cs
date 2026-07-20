@@ -23,8 +23,17 @@ namespace SmartStepsServer.Services
         public async Task SendEmailAsync(string toEmail, string subject, string body)
         {
             var emailSettings = _configuration.GetSection("EmailSettings");
+            var from = RequiredSetting(emailSettings, "From");
+            var password = RequiredSetting(emailSettings, "Password");
+            var host = RequiredSetting(emailSettings, "Host");
+            var portValue = RequiredSetting(emailSettings, "Port");
+            if (!int.TryParse(portValue, out var port) || port is < 1 or > 65535)
+            {
+                throw new InvalidOperationException("EmailSettings:Port must be a valid TCP port.");
+            }
+
             var email = new MimeMessage();
-            email.Sender = MailboxAddress.Parse(emailSettings["From"]);
+            email.Sender = MailboxAddress.Parse(from);
             email.To.Add(MailboxAddress.Parse(toEmail));
             email.Subject = subject;
 
@@ -32,10 +41,18 @@ namespace SmartStepsServer.Services
             email.Body = builder.ToMessageBody();
 
             using var smtp = new SmtpClient();
-            await smtp.ConnectAsync(emailSettings["Host"], int.Parse(emailSettings["Port"]!), SecureSocketOptions.StartTls);
-            await smtp.AuthenticateAsync(emailSettings["From"], emailSettings["Password"]);
+            await smtp.ConnectAsync(host, port, SecureSocketOptions.StartTls);
+            await smtp.AuthenticateAsync(from, password);
             await smtp.SendAsync(email);
             await smtp.DisconnectAsync(true);
+        }
+
+        private static string RequiredSetting(IConfigurationSection section, string key)
+        {
+            var value = section[key]?.Trim();
+            return string.IsNullOrWhiteSpace(value)
+                ? throw new InvalidOperationException($"EmailSettings:{key} is required to send email.")
+                : value;
         }
     }
 }

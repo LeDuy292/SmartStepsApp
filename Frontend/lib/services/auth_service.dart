@@ -9,7 +9,18 @@ import '../models/child_profile.dart';
 import '../utils/constants.dart';
 import 'local_profile_storage.dart';
 
-class AuthService {
+abstract interface class AuthGateway {
+  Future<void> ensureGoogleSignInInitialized();
+  Stream<GoogleSignInAccount?> get onGoogleUserChanged;
+  Future<String?> processGoogleUser(GoogleSignInAccount googleUser);
+  Future<String?> login(String email, String password);
+  Future<String?> loginWithGoogle();
+  Future<void> logout();
+  Future<String?> getUserRole();
+  Future<bool> forgotPassword(String email);
+}
+
+class AuthService implements AuthGateway {
   static final AuthService _instance = AuthService._internal();
 
   factory AuthService() {
@@ -31,6 +42,7 @@ class AuthService {
   final GoogleSignIn _googleSignIn = GoogleSignIn.instance;
   static Future<void>? _googleInitialization;
 
+  @override
   Future<void> ensureGoogleSignInInitialized() {
     return _googleInitialization ??= _initializeGoogleSignIn();
   }
@@ -96,6 +108,7 @@ class AuthService {
     return 'Đăng ký thất bại (mã ${response.statusCode}). Vui lòng kiểm tra lại thông tin.';
   }
 
+  @override
   Future<String?> login(String email, String password) async {
     try {
       final response = await http.post(
@@ -117,6 +130,7 @@ class AuthService {
     }
   }
 
+  @override
   Stream<GoogleSignInAccount?> get onGoogleUserChanged {
     return _googleSignIn.authenticationEvents.map((event) {
       if (event is GoogleSignInAuthenticationEventSignIn) {
@@ -126,10 +140,10 @@ class AuthService {
     });
   }
 
+  @override
   Future<String?> processGoogleUser(GoogleSignInAccount googleUser) async {
     try {
-      final GoogleSignInAuthentication googleAuth =
-          await googleUser.authentication;
+      final GoogleSignInAuthentication googleAuth = googleUser.authentication;
       final String? idToken = googleAuth.idToken;
 
       if (idToken == null) return 'Không thể lấy token từ Google.';
@@ -153,12 +167,12 @@ class AuthService {
     }
   }
 
+  @override
   Future<String?> loginWithGoogle() async {
     try {
       await ensureGoogleSignInInitialized();
-      final GoogleSignInAccount? googleUser = await _googleSignIn.authenticate();
+      final GoogleSignInAccount googleUser = await _googleSignIn.authenticate();
 
-      if (googleUser == null) return 'Đã hủy đăng nhập Google.';
       return await processGoogleUser(googleUser);
     } catch (e) {
       if (kDebugMode) print('Google login error: $e');
@@ -166,12 +180,13 @@ class AuthService {
     }
   }
 
+  @override
   Future<void> logout() async {
     try {
       await ensureGoogleSignInInitialized();
       await _googleSignIn.signOut();
     } catch (e) {
-      print('Google signOut error: $e');
+      debugPrint('Google signOut error: $e');
     }
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('jwt_token');
@@ -218,6 +233,7 @@ class AuthService {
     return !JwtDecoder.isExpired(token);
   }
 
+  @override
   Future<String?> getUserRole() async {
     final token = await getToken();
     if (token == null) return null;
@@ -252,6 +268,7 @@ class AuthService {
     return JwtDecoder.decode(token);
   }
 
+  @override
   Future<bool> forgotPassword(String email) async {
     try {
       final response = await http.post(
@@ -262,7 +279,7 @@ class AuthService {
       return response.statusCode == 200;
     } catch (e) {
       if (kDebugMode) {
-        print('Forgot password error: $e');
+        debugPrint('Forgot password error: $e');
       }
       return false;
     }

@@ -8,7 +8,14 @@ import '../models/learning_progress.dart';
 import '../utils/constants.dart';
 import 'auth_service.dart';
 
-class LearningService {
+abstract interface class LearningGateway {
+  Future<LearningAnalysis?> getLatestReport();
+  Future<LearningAnalysis> generateReport();
+  Future<void> completeSituation(int situationId);
+  Future<List<LearningRecommendation>> getRecommendations();
+}
+
+class LearningService implements LearningGateway {
   LearningService({AuthService? authService, http.Client? client})
     : _authService = authService ?? AuthService(),
       _client = client ?? http.Client();
@@ -68,6 +75,7 @@ class LearningService {
     );
   }
 
+  @override
   Future<void> completeSituation(int situationId) async {
     final session = await _session();
     await _send(
@@ -91,6 +99,7 @@ class LearningService {
     return LearningProgress.fromJson(payload);
   }
 
+  @override
   Future<LearningAnalysis?> getLatestReport() async {
     final session = await _session();
     final response = await _send(
@@ -107,6 +116,7 @@ class LearningService {
     return LearningAnalysis.fromStoredReport(payload);
   }
 
+  @override
   Future<List<LearningRecommendation>> getRecommendations() async {
     final session = await _session();
     final response = await _send(
@@ -144,6 +154,7 @@ class LearningService {
     );
   }
 
+  @override
   Future<LearningAnalysis> generateReport() async {
     final session = await _session();
     final response = await _send(

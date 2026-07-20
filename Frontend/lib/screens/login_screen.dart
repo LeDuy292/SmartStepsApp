@@ -17,11 +17,13 @@ class LoginScreen extends StatefulWidget {
     required this.profileStorage,
     required this.onLogin,
     required this.onRegistrationCompleted,
+    this.authGateway,
   });
 
   final LocalProfileStorage profileStorage;
   final void Function(BuildContext context) onLogin;
   final void Function(BuildContext context) onRegistrationCompleted;
+  final AuthGateway? authGateway;
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -30,7 +32,7 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
-  final AuthService _authService = AuthService();
+  late final AuthGateway _authService;
   bool _isLoading = false;
   bool _isGoogleReady = false;
 
@@ -39,6 +41,7 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   void initState() {
     super.initState();
+    _authService = widget.authGateway ?? AuthService();
     _authService.ensureGoogleSignInInitialized().then((_) {
       if (mounted) {
         setState(() => _isGoogleReady = true);
@@ -68,9 +71,9 @@ class _LoginScreenState extends State<LoginScreen> {
       setState(() {
         _isLoading = false;
       });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(errorMessage)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(errorMessage)));
     }
   }
 
@@ -107,9 +110,9 @@ class _LoginScreenState extends State<LoginScreen> {
       setState(() {
         _isLoading = false;
       });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(errorMessage)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(errorMessage)));
     }
   }
 
@@ -128,9 +131,9 @@ class _LoginScreenState extends State<LoginScreen> {
       setState(() {
         _isLoading = false;
       });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(errorMessage)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(errorMessage)));
     }
   }
 
@@ -139,9 +142,9 @@ class _LoginScreenState extends State<LoginScreen> {
     if (!mounted) return;
 
     if (role == 'Admin') {
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const AdminLayout()),
-      );
+      Navigator.of(
+        context,
+      ).pushReplacement(MaterialPageRoute(builder: (_) => const AdminLayout()));
     } else {
       widget.onLogin(context);
     }
@@ -310,8 +313,10 @@ class _LoginScreenState extends State<LoginScreen> {
                             alignment: Alignment.centerRight,
                             child: SmartStepsPressEffect(
                               child: TextButton(
-                                onPressed: () =>
-                                    _showForgotPasswordDialog(context),
+                                onPressed: () => _showForgotPasswordDialog(
+                                  context,
+                                  _authService,
+                                ),
                                 style: TextButton.styleFrom(
                                   padding: EdgeInsets.zero,
                                   minimumSize: const Size(0, 32),
@@ -431,7 +436,7 @@ void _showFeatureInDevelopment(BuildContext context) {
   );
 }
 
-void _showForgotPasswordDialog(BuildContext context) {
+void _showForgotPasswordDialog(BuildContext context, AuthGateway authGateway) {
   final TextEditingController forgotEmailController = TextEditingController();
   bool isSending = false;
 
@@ -479,9 +484,7 @@ void _showForgotPasswordDialog(BuildContext context) {
                           return;
                         }
                         setState(() => isSending = true);
-                        final success = await AuthService().forgotPassword(
-                          email,
-                        );
+                        final success = await authGateway.forgotPassword(email);
                         setState(() => isSending = false);
 
                         if (dialogContext.mounted) {

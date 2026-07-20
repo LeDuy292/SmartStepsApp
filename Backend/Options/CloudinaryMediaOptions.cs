@@ -20,7 +20,7 @@ public sealed class CloudinaryMediaOptions
 
     public string ResourceType { get; set; } = "video";
 
-    public string DeliveryType { get; set; } = "private";
+    public string DeliveryType { get; set; } = "upload";
 
     public string? DevelopmentMediaRoot { get; set; }
 }

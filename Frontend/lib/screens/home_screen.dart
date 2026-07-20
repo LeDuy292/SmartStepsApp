@@ -618,14 +618,19 @@ class SmartStepsApp extends StatefulWidget {
     super.key,
     SituationService? situationService,
     LocalProfileStorage? profileStorage,
+    AuthGateway? authGateway,
+    this.learningGateway,
     this.showPremiumOfferAfterLogin = false,
     this.showInitialSurveyAfterLogin = true,
     this.enableAudio = false,
   }) : situationService = situationService ?? SituationService(),
-       profileStorage = profileStorage ?? const LocalProfileStorage();
+       profileStorage = profileStorage ?? const LocalProfileStorage(),
+       authGateway = authGateway ?? AuthService();
 
   final SituationService situationService;
   final LocalProfileStorage profileStorage;
+  final AuthGateway authGateway;
+  final LearningGateway? learningGateway;
   final bool showPremiumOfferAfterLogin;
   final bool showInitialSurveyAfterLogin;
   final bool enableAudio;
@@ -663,6 +668,7 @@ class _SmartStepsAppState extends State<SmartStepsApp> {
           profileStorage: widget.profileStorage,
           showPremiumOffer: widget.showPremiumOfferAfterLogin,
           onLogout: _handleLogout,
+          learningGateway: widget.learningGateway,
         ),
       ),
     );
@@ -716,7 +722,7 @@ class _SmartStepsAppState extends State<SmartStepsApp> {
 
   void _handleLogout(BuildContext context) async {
     _hasCompletedInitialSurvey = false;
-    await AuthService().logout();
+    await widget.authGateway.logout();
     if (!context.mounted) return;
     Navigator.of(context).pushAndRemoveUntil(
       MaterialPageRoute<void>(
@@ -724,6 +730,7 @@ class _SmartStepsAppState extends State<SmartStepsApp> {
           profileStorage: widget.profileStorage,
           onLogin: _handleLogin,
           onRegistrationCompleted: _handleRegistrationCompleted,
+          authGateway: widget.authGateway,
         ),
       ),
       (route) => false,
@@ -740,6 +747,7 @@ class _SmartStepsAppState extends State<SmartStepsApp> {
         profileStorage: widget.profileStorage,
         onLogin: _handleLogin,
         onRegistrationCompleted: _handleRegistrationCompleted,
+        authGateway: widget.authGateway,
       ),
     );
 
@@ -757,12 +765,14 @@ class SmartStepsCatalogPage extends StatefulWidget {
     required this.situationService,
     required this.profileStorage,
     required this.onLogout,
+    this.learningGateway,
     this.showPremiumOffer = false,
   });
 
   final SituationService situationService;
   final LocalProfileStorage profileStorage;
   final void Function(BuildContext context) onLogout;
+  final LearningGateway? learningGateway;
   final bool showPremiumOffer;
 
   @override
@@ -1256,6 +1266,7 @@ class _SmartStepsCatalogPageState extends State<SmartStepsCatalogPage>
             onStartLesson: (situationId, islandId) {
               unawaited(_startSuggestedLesson(situationId, islandId));
             },
+            learningGateway: widget.learningGateway,
           ),
           const _PracticeTabPage(),
           ProfileScreen(

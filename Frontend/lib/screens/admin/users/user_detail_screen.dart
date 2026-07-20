@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import '../../../services/admin_api_service.dart';
-import '../../../theme/duo_theme.dart';
 
 class UserDetailScreen extends StatefulWidget {
   final int userId;
@@ -31,7 +30,11 @@ class _UserDetailScreenState extends State<UserDetailScreen> {
       });
     } catch (e) {
       setState(() => _isLoading = false);
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Lỗi: $e')));
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Lỗi: $e')));
+      }
     }
   }
 
@@ -49,9 +52,7 @@ class _UserDetailScreenState extends State<UserDetailScreen> {
     }
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Chi tiết người dùng'),
-      ),
+      appBar: AppBar(title: const Text('Chi tiết người dùng')),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -63,7 +64,10 @@ class _UserDetailScreenState extends State<UserDetailScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Thông tin cơ bản', style: Theme.of(context).textTheme.titleLarge),
+                    Text(
+                      'Thông tin cơ bản',
+                      style: Theme.of(context).textTheme.titleLarge,
+                    ),
                     const Divider(),
                     ListTile(
                       leading: const Icon(Icons.person),
@@ -86,7 +90,9 @@ class _UserDetailScreenState extends State<UserDetailScreen> {
                       subtitle: Text(
                         _user!['status'] ?? '',
                         style: TextStyle(
-                          color: _user!['status'] == 'Active' ? Colors.green : Colors.red,
+                          color: _user!['status'] == 'Active'
+                              ? Colors.green
+                              : Colors.red,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
@@ -102,19 +108,30 @@ class _UserDetailScreenState extends State<UserDetailScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Thống kê học tập', style: Theme.of(context).textTheme.titleLarge),
+                    Text(
+                      'Thống kê học tập',
+                      style: Theme.of(context).textTheme.titleLarge,
+                    ),
                     const Divider(),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceAround,
                       children: [
-                        _buildStatBox('Bài học đã tham gia', _user!['progressCount'].toString(), Colors.blue),
-                        _buildStatBox('Câu hỏi đã trả lời', _user!['answersCount'].toString(), Colors.orange),
+                        _buildStatBox(
+                          'Bài học đã tham gia',
+                          _user!['progressCount'].toString(),
+                          Colors.blue,
+                        ),
+                        _buildStatBox(
+                          'Câu hỏi đã trả lời',
+                          _user!['answersCount'].toString(),
+                          Colors.orange,
+                        ),
                       ],
                     ),
                   ],
                 ),
               ),
-            )
+            ),
           ],
         ),
       ),
@@ -125,13 +142,20 @@ class _UserDetailScreenState extends State<UserDetailScreen> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: color.withOpacity(0.3)),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
       ),
       child: Column(
         children: [
-          Text(value, style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: color)),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              color: color,
+            ),
+          ),
           const SizedBox(height: 8),
           Text(label, style: const TextStyle(fontWeight: FontWeight.bold)),
         ],

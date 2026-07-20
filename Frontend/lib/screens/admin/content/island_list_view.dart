@@ -33,7 +33,9 @@ class _IslandListViewState extends State<IslandListView> {
     } catch (e) {
       setState(() => _isLoading = false);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Lỗi: $e')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Lỗi: $e')));
       }
     }
   }
@@ -43,9 +45,14 @@ class _IslandListViewState extends State<IslandListView> {
       context: context,
       builder: (c) => AlertDialog(
         title: const Text('Xác nhận'),
-        content: const Text('Bạn có chắc muốn xóa đảo này? Nếu đảo có chứa bài học, bạn sẽ không thể xóa (hãy chuyển trạng thái thành Hidden).'),
+        content: const Text(
+          'Bạn có chắc muốn xóa đảo này? Nếu đảo có chứa bài học, bạn sẽ không thể xóa (hãy chuyển trạng thái thành Hidden).',
+        ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('Hủy')),
+          TextButton(
+            onPressed: () => Navigator.pop(c, false),
+            child: const Text('Hủy'),
+          ),
           FilledButton(
             onPressed: () => Navigator.pop(c, true),
             style: FilledButton.styleFrom(backgroundColor: Colors.red),
@@ -60,7 +67,11 @@ class _IslandListViewState extends State<IslandListView> {
         await _api.deleteIsland(id);
         _fetchIslands();
       } catch (e) {
-        if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Lỗi: $e')));
+        if (mounted) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text('Lỗi: $e')));
+        }
       }
     }
   }
@@ -74,7 +85,10 @@ class _IslandListViewState extends State<IslandListView> {
           padding: const EdgeInsets.all(16.0),
           child: Row(
             children: [
-              Text('Quản lý Đảo (Nhóm bài học)', style: Theme.of(context).textTheme.headlineSmall),
+              Text(
+                'Quản lý Đảo (Nhóm bài học)',
+                style: Theme.of(context).textTheme.headlineSmall,
+              ),
               const Spacer(),
               FilledButton.icon(
                 onPressed: () async {
@@ -86,7 +100,7 @@ class _IslandListViewState extends State<IslandListView> {
                 },
                 icon: const Icon(Icons.add),
                 label: const Text('Thêm Đảo mới'),
-              )
+              ),
             ],
           ),
         ),
@@ -111,7 +125,9 @@ class _IslandListViewState extends State<IslandListView> {
                           rows: _islands.map((i) {
                             return DataRow(
                               cells: [
-                                DataCell(Text(i['orderIndex']?.toString() ?? '0')),
+                                DataCell(
+                                  Text(i['orderIndex']?.toString() ?? '0'),
+                                ),
                                 DataCell(Text(i['name'] ?? '')),
                                 DataCell(
                                   SizedBox(
@@ -123,46 +139,63 @@ class _IslandListViewState extends State<IslandListView> {
                                     ),
                                   ),
                                 ),
-                                DataCell(Text(i['situationCount']?.toString() ?? '0')),
+                                DataCell(
+                                  Text(i['situationCount']?.toString() ?? '0'),
+                                ),
                                 DataCell(
                                   Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: 4,
+                                    ),
                                     decoration: BoxDecoration(
                                       color: i['status'] == 'Active'
-                                          ? Colors.green.withOpacity(0.1)
-                                          : Colors.grey.withOpacity(0.1),
+                                          ? Colors.green.withValues(alpha: 0.1)
+                                          : Colors.grey.withValues(alpha: 0.1),
                                       borderRadius: BorderRadius.circular(4),
                                     ),
                                     child: Text(
                                       i['status'] ?? '',
                                       style: TextStyle(
-                                        color: i['status'] == 'Active' ? Colors.green : Colors.grey,
+                                        color: i['status'] == 'Active'
+                                            ? Colors.green
+                                            : Colors.grey,
                                         fontWeight: FontWeight.bold,
                                       ),
                                     ),
                                   ),
                                 ),
-                                DataCell(Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    IconButton(
-                                      icon: const Icon(Icons.edit, color: DuoColors.primaryYellow),
-                                      tooltip: 'Sửa',
-                                      onPressed: () async {
-                                        final result = await showDialog(
-                                          context: context,
-                                          builder: (_) => IslandFormDialog(island: i),
-                                        );
-                                        if (result == true) _fetchIslands();
-                                      },
-                                    ),
-                                    IconButton(
-                                      icon: const Icon(Icons.delete, color: Colors.red),
-                                      tooltip: 'Xóa',
-                                      onPressed: () => _deleteIsland(i['islandId']),
-                                    ),
-                                  ],
-                                )),
+                                DataCell(
+                                  Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      IconButton(
+                                        icon: const Icon(
+                                          Icons.edit,
+                                          color: DuoColors.primaryYellow,
+                                        ),
+                                        tooltip: 'Sửa',
+                                        onPressed: () async {
+                                          final result = await showDialog(
+                                            context: context,
+                                            builder: (_) =>
+                                                IslandFormDialog(island: i),
+                                          );
+                                          if (result == true) _fetchIslands();
+                                        },
+                                      ),
+                                      IconButton(
+                                        icon: const Icon(
+                                          Icons.delete,
+                                          color: Colors.red,
+                                        ),
+                                        tooltip: 'Xóa',
+                                        onPressed: () =>
+                                            _deleteIsland(i['islandId']),
+                                      ),
+                                    ],
+                                  ),
+                                ),
                               ],
                             );
                           }).toList(),

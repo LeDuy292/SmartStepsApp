@@ -1,10 +1,14 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'package:smartsteps/main.dart';
 import 'package:smartsteps/models/child_profile.dart';
+import 'package:smartsteps/models/learning_analysis.dart';
 import 'package:smartsteps/models/situation.dart';
+import 'package:smartsteps/services/auth_service.dart';
 import 'package:smartsteps/services/local_profile_storage.dart';
+import 'package:smartsteps/services/learning_service.dart';
 import 'package:smartsteps/services/situation_service.dart';
 import 'package:video_player_platform_interface/video_player_platform_interface.dart';
 
@@ -27,13 +31,13 @@ void main() {
       SmartStepsApp(
         situationService: situationService,
         profileStorage: profileStorage,
+        authGateway: _FakeAuthGateway(),
+        learningGateway: _FakeLearningGateway(),
         showPremiumOfferAfterLogin: false,
       ),
     );
     await tester.pump(const Duration(milliseconds: 200));
-    await tester.tap(find.byKey(const ValueKey('login-submit-button')));
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 500));
+    await _login(tester);
     await _completeRegistration(tester);
 
     expect(situationService.detailCalls, 0);
@@ -54,7 +58,7 @@ void main() {
     expect(situationService.detailCalls, 1);
     expect(find.text(_fakeSummary.title), findsWidgets);
 
-    await tester.tap(find.byKey(const ValueKey('start-lesson-button')));
+    await tester.tap(find.byKey(const ValueKey('situation-1')));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 450));
 
@@ -99,19 +103,22 @@ void main() {
       SmartStepsApp(
         situationService: situationService,
         profileStorage: profileStorage,
+        authGateway: _FakeAuthGateway(),
+        learningGateway: _FakeLearningGateway(),
         showPremiumOfferAfterLogin: false,
       ),
     );
     await tester.pump(const Duration(milliseconds: 200));
-    await tester.tap(find.byKey(const ValueKey('login-submit-button')));
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 500));
+    await _login(tester);
     await _completeRegistration(tester);
 
     expect(situationService.detailCalls, 0);
 
     await tester.tap(find.byKey(const ValueKey('learn-tab-button')));
-    await tester.pumpAndSettle();
+    await _pumpUntilFound(
+      tester,
+      find.byKey(const ValueKey('parent-report-page')),
+    );
 
     expect(find.byKey(const ValueKey('parent-report-page')), findsOneWidget);
     expect(situationService.detailCalls, 3);
@@ -121,7 +128,7 @@ void main() {
       find.byKey(const ValueKey('parent-report-page')),
       const Offset(0, -900),
     );
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 600));
 
     expect(find.text('What should the kid do?'), findsWidgets);
     expect(
@@ -143,23 +150,26 @@ void main() {
       SmartStepsApp(
         situationService: situationService,
         profileStorage: profileStorage,
+        authGateway: _FakeAuthGateway(),
+        learningGateway: _FakeLearningGateway(),
         showPremiumOfferAfterLogin: false,
       ),
     );
     await tester.pump(const Duration(milliseconds: 200));
-    await tester.tap(find.byKey(const ValueKey('login-submit-button')));
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 500));
+    await _login(tester);
     await _completeRegistration(tester);
 
     await tester.tap(find.byKey(const ValueKey('learn-tab-button')));
-    await tester.pumpAndSettle();
+    await _pumpUntilFound(
+      tester,
+      find.byKey(const ValueKey('parent-report-page')),
+    );
 
     expect(find.byKey(const ValueKey('parent-report-page')), findsOneWidget);
     expect(find.byKey(const ValueKey('profile-screen')), findsNothing);
 
     await tester.tap(find.byKey(const ValueKey('profile-tab-button')));
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 600));
 
     expect(find.byKey(const ValueKey('profile-screen')), findsOneWidget);
     expect(find.byKey(const ValueKey('parent-report-page')), findsNothing);
@@ -179,13 +189,13 @@ void main() {
       SmartStepsApp(
         situationService: situationService,
         profileStorage: profileStorage,
+        authGateway: _FakeAuthGateway(),
+        learningGateway: _FakeLearningGateway(),
         showPremiumOfferAfterLogin: true,
       ),
     );
     await tester.pump(const Duration(milliseconds: 200));
-    await tester.tap(find.byKey(const ValueKey('login-submit-button')));
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 500));
+    await _login(tester);
     await _completeRegistration(tester);
 
     final gateQuestion = tester.widget<Text>(
@@ -229,6 +239,24 @@ void _setPhoneViewport(WidgetTester tester) {
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.resetPhysicalSize);
   addTearDown(tester.view.resetDevicePixelRatio);
+}
+
+Future<void> _login(WidgetTester tester) async {
+  final fields = find.byType(TextField);
+  await tester.enterText(fields.at(0), 'child@example.com');
+  await tester.enterText(fields.at(1), 'password123');
+  await tester.tap(find.byKey(const ValueKey('login-submit-button')));
+  await tester.pump();
+  await tester.pump(const Duration(milliseconds: 500));
+}
+
+Future<void> _pumpUntilFound(WidgetTester tester, Finder finder) async {
+  for (var attempt = 0; attempt < 30; attempt++) {
+    await tester.pump(const Duration(milliseconds: 100));
+    if (finder.evaluate().isNotEmpty) {
+      return;
+    }
+  }
 }
 
 Future<void> _completeRegistration(WidgetTester tester) async {
@@ -488,6 +516,51 @@ class _FakeVideoPlayerPlatform extends VideoPlayerPlatform {
 
   @override
   Future<void> setMixWithOthers(bool mixWithOthers) async {}
+}
+
+class _FakeAuthGateway implements AuthGateway {
+  @override
+  Future<void> ensureGoogleSignInInitialized() async {}
+
+  @override
+  Stream<GoogleSignInAccount?> get onGoogleUserChanged => const Stream.empty();
+
+  @override
+  Future<String?> processGoogleUser(GoogleSignInAccount googleUser) async =>
+      null;
+
+  @override
+  Future<String?> login(String email, String password) async => null;
+
+  @override
+  Future<String?> loginWithGoogle() async => null;
+
+  @override
+  Future<void> logout() async {}
+
+  @override
+  Future<String?> getUserRole() async => 'Child';
+
+  @override
+  Future<bool> forgotPassword(String email) async => true;
+}
+
+class _FakeLearningGateway implements LearningGateway {
+  @override
+  Future<LearningAnalysis?> getLatestReport() {
+    throw const LearningServiceException('Use local report data in tests.');
+  }
+
+  @override
+  Future<LearningAnalysis> generateReport() {
+    throw const LearningServiceException('Use local report data in tests.');
+  }
+
+  @override
+  Future<void> completeSituation(int situationId) async {}
+
+  @override
+  Future<List<LearningRecommendation>> getRecommendations() async => const [];
 }
 
 class _MemoryProfileStorage extends LocalProfileStorage {

@@ -44,7 +44,9 @@ class _UserListViewState extends State<UserListView> {
     } catch (e) {
       setState(() => _isLoading = false);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Lỗi: $e')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Lỗi: $e')));
       }
     }
   }
@@ -56,7 +58,10 @@ class _UserListViewState extends State<UserListView> {
         title: const Text('Xác nhận'),
         content: const Text('Bạn có chắc muốn xóa/vô hiệu hóa người dùng này?'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('Hủy')),
+          TextButton(
+            onPressed: () => Navigator.pop(c, false),
+            child: const Text('Hủy'),
+          ),
           FilledButton(
             onPressed: () => Navigator.pop(c, true),
             style: FilledButton.styleFrom(backgroundColor: Colors.red),
@@ -71,7 +76,11 @@ class _UserListViewState extends State<UserListView> {
         await _api.deleteUser(id);
         _fetchUsers();
       } catch (e) {
-        if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Lỗi: $e')));
+        if (mounted) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text('Lỗi: $e')));
+        }
       }
     }
   }
@@ -87,7 +96,11 @@ class _UserListViewState extends State<UserListView> {
       }
       _fetchUsers();
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Lỗi: $e')));
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Lỗi: $e')));
+      }
     }
   }
 
@@ -100,7 +113,10 @@ class _UserListViewState extends State<UserListView> {
           padding: const EdgeInsets.all(16.0),
           child: Row(
             children: [
-              Text('Quản lý người dùng', style: Theme.of(context).textTheme.headlineSmall),
+              Text(
+                'Quản lý người dùng',
+                style: Theme.of(context).textTheme.headlineSmall,
+              ),
               const Spacer(),
               FilledButton.icon(
                 onPressed: () async {
@@ -112,7 +128,7 @@ class _UserListViewState extends State<UserListView> {
                 },
                 icon: const Icon(Icons.add),
                 label: const Text('Thêm người dùng'),
-              )
+              ),
             ],
           ),
         ),
@@ -138,8 +154,11 @@ class _UserListViewState extends State<UserListView> {
               const SizedBox(width: 16),
               Expanded(
                 child: DropdownButtonFormField<String>(
-                  value: _selectedRole.isEmpty ? null : _selectedRole,
-                  decoration: const InputDecoration(labelText: 'Vai trò', border: OutlineInputBorder()),
+                  initialValue: _selectedRole.isEmpty ? null : _selectedRole,
+                  decoration: const InputDecoration(
+                    labelText: 'Vai trò',
+                    border: OutlineInputBorder(),
+                  ),
                   items: const [
                     DropdownMenuItem(value: '', child: Text('Tất cả')),
                     DropdownMenuItem(value: 'Child', child: Text('Trẻ em')),
@@ -158,13 +177,21 @@ class _UserListViewState extends State<UserListView> {
               const SizedBox(width: 16),
               Expanded(
                 child: DropdownButtonFormField<String>(
-                  value: _selectedStatus.isEmpty ? null : _selectedStatus,
-                  decoration: const InputDecoration(labelText: 'Trạng thái', border: OutlineInputBorder()),
+                  initialValue: _selectedStatus.isEmpty
+                      ? null
+                      : _selectedStatus,
+                  decoration: const InputDecoration(
+                    labelText: 'Trạng thái',
+                    border: OutlineInputBorder(),
+                  ),
                   items: const [
                     DropdownMenuItem(value: '', child: Text('Tất cả')),
                     DropdownMenuItem(value: 'Active', child: Text('Hoạt động')),
                     DropdownMenuItem(value: 'Locked', child: Text('Bị khóa')),
-                    DropdownMenuItem(value: 'Inactive', child: Text('Ngừng HD')),
+                    DropdownMenuItem(
+                      value: 'Inactive',
+                      child: Text('Ngừng HD'),
+                    ),
                   ],
                   onChanged: (val) {
                     if (val != null) {
@@ -205,11 +232,20 @@ class _UserListViewState extends State<UserListView> {
                                 DataCell(Text(u['role'] ?? '')),
                                 DataCell(
                                   Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: 4,
+                                    ),
                                     decoration: BoxDecoration(
                                       color: u['status'] == 'Active'
-                                          ? Colors.green.withOpacity(0.1)
-                                          : (u['status'] == 'Locked' ? Colors.red.withOpacity(0.1) : Colors.grey.withOpacity(0.1)),
+                                          ? Colors.green.withValues(alpha: 0.1)
+                                          : (u['status'] == 'Locked'
+                                                ? Colors.red.withValues(
+                                                    alpha: 0.1,
+                                                  )
+                                                : Colors.grey.withValues(
+                                                    alpha: 0.1,
+                                                  )),
                                       borderRadius: BorderRadius.circular(4),
                                     ),
                                     child: Text(
@@ -217,41 +253,59 @@ class _UserListViewState extends State<UserListView> {
                                       style: TextStyle(
                                         color: u['status'] == 'Active'
                                             ? Colors.green
-                                            : (u['status'] == 'Locked' ? Colors.red : Colors.grey),
+                                            : (u['status'] == 'Locked'
+                                                  ? Colors.red
+                                                  : Colors.grey),
                                         fontWeight: FontWeight.bold,
                                       ),
                                     ),
                                   ),
                                 ),
-                                DataCell(Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    IconButton(
-                                      icon: const Icon(Icons.edit, color: DuoColors.primaryYellow),
-                                      tooltip: 'Sửa',
-                                      onPressed: () async {
-                                        final result = await showDialog(
-                                          context: context,
-                                          builder: (_) => UserFormDialog(user: u),
-                                        );
-                                        if (result == true) _fetchUsers();
-                                      },
-                                    ),
-                                    IconButton(
-                                      icon: Icon(
-                                        u['status'] == 'Locked' ? Icons.lock_open : Icons.lock,
-                                        color: u['status'] == 'Locked' ? Colors.green : Colors.orange,
+                                DataCell(
+                                  Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      IconButton(
+                                        icon: const Icon(
+                                          Icons.edit,
+                                          color: DuoColors.primaryYellow,
+                                        ),
+                                        tooltip: 'Sửa',
+                                        onPressed: () async {
+                                          final result = await showDialog(
+                                            context: context,
+                                            builder: (_) =>
+                                                UserFormDialog(user: u),
+                                          );
+                                          if (result == true) _fetchUsers();
+                                        },
                                       ),
-                                      tooltip: u['status'] == 'Locked' ? 'Mở khóa' : 'Khóa',
-                                      onPressed: () => _toggleLockStatus(u),
-                                    ),
-                                    IconButton(
-                                      icon: const Icon(Icons.delete, color: Colors.red),
-                                      tooltip: 'Xóa',
-                                      onPressed: () => _deleteUser(u['userId']),
-                                    ),
-                                  ],
-                                )),
+                                      IconButton(
+                                        icon: Icon(
+                                          u['status'] == 'Locked'
+                                              ? Icons.lock_open
+                                              : Icons.lock,
+                                          color: u['status'] == 'Locked'
+                                              ? Colors.green
+                                              : Colors.orange,
+                                        ),
+                                        tooltip: u['status'] == 'Locked'
+                                            ? 'Mở khóa'
+                                            : 'Khóa',
+                                        onPressed: () => _toggleLockStatus(u),
+                                      ),
+                                      IconButton(
+                                        icon: const Icon(
+                                          Icons.delete,
+                                          color: Colors.red,
+                                        ),
+                                        tooltip: 'Xóa',
+                                        onPressed: () =>
+                                            _deleteUser(u['userId']),
+                                      ),
+                                    ],
+                                  ),
+                                ),
                               ],
                             );
                           }).toList(),

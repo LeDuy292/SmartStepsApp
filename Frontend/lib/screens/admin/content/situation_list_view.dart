@@ -30,7 +30,7 @@ class _SituationListViewState extends State<SituationListView> {
     try {
       final islands = await _api.getIslands();
       final situations = await _api.getSituations(islandId: _selectedIslandId);
-      
+
       setState(() {
         _islands = islands;
         _situations = situations;
@@ -39,7 +39,9 @@ class _SituationListViewState extends State<SituationListView> {
     } catch (e) {
       setState(() => _isLoading = false);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Lỗi: $e')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Lỗi: $e')));
       }
     }
   }
@@ -49,9 +51,14 @@ class _SituationListViewState extends State<SituationListView> {
       context: context,
       builder: (c) => AlertDialog(
         title: const Text('Xác nhận'),
-        content: const Text('Bạn có chắc muốn xóa bài học này? Nếu đã có dữ liệu người dùng, bài học sẽ chỉ bị ẩn (Hidden).'),
+        content: const Text(
+          'Bạn có chắc muốn xóa bài học này? Nếu đã có dữ liệu người dùng, bài học sẽ chỉ bị ẩn (Hidden).',
+        ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('Hủy')),
+          TextButton(
+            onPressed: () => Navigator.pop(c, false),
+            child: const Text('Hủy'),
+          ),
           FilledButton(
             onPressed: () => Navigator.pop(c, true),
             style: FilledButton.styleFrom(backgroundColor: Colors.red),
@@ -66,7 +73,11 @@ class _SituationListViewState extends State<SituationListView> {
         await _api.deleteSituation(id);
         _fetchData();
       } catch (e) {
-        if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Lỗi: $e')));
+        if (mounted) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text('Lỗi: $e')));
+        }
       }
     }
   }
@@ -80,22 +91,33 @@ class _SituationListViewState extends State<SituationListView> {
           padding: const EdgeInsets.all(16.0),
           child: Row(
             children: [
-              Text('Quản lý Bài học (Situations)', style: Theme.of(context).textTheme.headlineSmall),
+              Text(
+                'Quản lý Bài học (Situations)',
+                style: Theme.of(context).textTheme.headlineSmall,
+              ),
               const SizedBox(width: 32),
               Expanded(
                 child: DropdownButtonFormField<int?>(
-                  value: _selectedIslandId,
+                  initialValue: _selectedIslandId,
                   decoration: const InputDecoration(
                     labelText: 'Lọc theo Đảo',
                     border: OutlineInputBorder(),
-                    contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    contentPadding: EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
+                    ),
                   ),
                   items: [
-                    const DropdownMenuItem<int?>(value: null, child: Text('Tất cả các đảo')),
-                    ..._islands.map((i) => DropdownMenuItem<int?>(
-                          value: i['islandId'],
-                          child: Text(i['name']),
-                        ))
+                    const DropdownMenuItem<int?>(
+                      value: null,
+                      child: Text('Tất cả các đảo'),
+                    ),
+                    ..._islands.map(
+                      (i) => DropdownMenuItem<int?>(
+                        value: i['islandId'],
+                        child: Text(i['name']),
+                      ),
+                    ),
                   ],
                   onChanged: (v) {
                     _selectedIslandId = v;
@@ -108,13 +130,16 @@ class _SituationListViewState extends State<SituationListView> {
                 onPressed: () async {
                   final result = await showDialog(
                     context: context,
-                    builder: (_) => SituationFormDialog(islands: _islands, selectedIslandId: _selectedIslandId),
+                    builder: (_) => SituationFormDialog(
+                      islands: _islands,
+                      selectedIslandId: _selectedIslandId,
+                    ),
                   );
                   if (result == true) _fetchData();
                 },
                 icon: const Icon(Icons.add),
                 label: const Text('Thêm Bài học mới'),
-              )
+              ),
             ],
           ),
         ),
@@ -149,19 +174,34 @@ class _SituationListViewState extends State<SituationListView> {
                                       s['title'] ?? '',
                                       maxLines: 2,
                                       overflow: TextOverflow.ellipsis,
-                                      style: const TextStyle(fontWeight: FontWeight.bold),
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                      ),
                                     ),
                                   ),
                                 ),
-                                DataCell(Text(s['stepCount']?.toString() ?? '0')),
-                                DataCell(Text(s['flashcardCount']?.toString() ?? '0')),
+                                DataCell(
+                                  Text(s['stepCount']?.toString() ?? '0'),
+                                ),
+                                DataCell(
+                                  Text(s['flashcardCount']?.toString() ?? '0'),
+                                ),
                                 DataCell(
                                   Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: 4,
+                                    ),
                                     decoration: BoxDecoration(
                                       color: s['status'] == 'Published'
-                                          ? Colors.green.withOpacity(0.1)
-                                          : (s['status'] == 'Hidden' ? Colors.red.withOpacity(0.1) : Colors.orange.withOpacity(0.1)),
+                                          ? Colors.green.withValues(alpha: 0.1)
+                                          : (s['status'] == 'Hidden'
+                                                ? Colors.red.withValues(
+                                                    alpha: 0.1,
+                                                  )
+                                                : Colors.orange.withValues(
+                                                    alpha: 0.1,
+                                                  )),
                                       borderRadius: BorderRadius.circular(4),
                                     ),
                                     child: Text(
@@ -169,45 +209,68 @@ class _SituationListViewState extends State<SituationListView> {
                                       style: TextStyle(
                                         color: s['status'] == 'Published'
                                             ? Colors.green
-                                            : (s['status'] == 'Hidden' ? Colors.red : Colors.orange),
+                                            : (s['status'] == 'Hidden'
+                                                  ? Colors.red
+                                                  : Colors.orange),
                                         fontWeight: FontWeight.bold,
                                       ),
                                     ),
                                   ),
                                 ),
-                                DataCell(Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    IconButton(
-                                      icon: const Icon(Icons.edit_document, color: DuoColors.primaryYellow),
-                                      tooltip: 'Sửa nội dung (Steps, Flashcards)',
-                                      onPressed: () {
-                                        Navigator.push(
-                                          context,
-                                          MaterialPageRoute(
-                                            builder: (_) => SituationEditorScreen(situationId: s['situationId']),
-                                          ),
-                                        );
-                                      },
-                                    ),
-                                    IconButton(
-                                      icon: const Icon(Icons.settings, color: Colors.blue),
-                                      tooltip: 'Cài đặt bài học (Tên, Trạng thái)',
-                                      onPressed: () async {
-                                        final result = await showDialog(
-                                          context: context,
-                                          builder: (_) => SituationFormDialog(islands: _islands, situation: s),
-                                        );
-                                        if (result == true) _fetchData();
-                                      },
-                                    ),
-                                    IconButton(
-                                      icon: const Icon(Icons.delete, color: Colors.red),
-                                      tooltip: 'Xóa',
-                                      onPressed: () => _deleteSituation(s['situationId']),
-                                    ),
-                                  ],
-                                )),
+                                DataCell(
+                                  Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      IconButton(
+                                        icon: const Icon(
+                                          Icons.edit_document,
+                                          color: DuoColors.primaryYellow,
+                                        ),
+                                        tooltip:
+                                            'Sửa nội dung (Steps, Flashcards)',
+                                        onPressed: () {
+                                          Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder: (_) =>
+                                                  SituationEditorScreen(
+                                                    situationId:
+                                                        s['situationId'],
+                                                  ),
+                                            ),
+                                          );
+                                        },
+                                      ),
+                                      IconButton(
+                                        icon: const Icon(
+                                          Icons.settings,
+                                          color: Colors.blue,
+                                        ),
+                                        tooltip:
+                                            'Cài đặt bài học (Tên, Trạng thái)',
+                                        onPressed: () async {
+                                          final result = await showDialog(
+                                            context: context,
+                                            builder: (_) => SituationFormDialog(
+                                              islands: _islands,
+                                              situation: s,
+                                            ),
+                                          );
+                                          if (result == true) _fetchData();
+                                        },
+                                      ),
+                                      IconButton(
+                                        icon: const Icon(
+                                          Icons.delete,
+                                          color: Colors.red,
+                                        ),
+                                        tooltip: 'Xóa',
+                                        onPressed: () =>
+                                            _deleteSituation(s['situationId']),
+                                      ),
+                                    ],
+                                  ),
+                                ),
                               ],
                             );
                           }).toList(),

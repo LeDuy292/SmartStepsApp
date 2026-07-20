@@ -27,12 +27,14 @@ class ParentReportPage extends StatefulWidget {
     required this.profileStorage,
     required this.isActive,
     this.onStartLesson,
+    this.learningGateway,
   });
 
   final SituationService situationService;
   final LocalProfileStorage profileStorage;
   final bool isActive;
   final void Function(int situationId, int islandId)? onStartLesson;
+  final LearningGateway? learningGateway;
 
   @override
   State<ParentReportPage> createState() => _ParentReportPageState();
@@ -111,7 +113,7 @@ class _ParentReportPageState extends State<ParentReportPage> {
       LearningAnalysis? analysis;
       String? analysisError;
       try {
-        final learningService = LearningService();
+        final learningService = widget.learningGateway ?? LearningService();
         analysis = force ? null : await learningService.getLatestReport();
         analysis ??= await learningService.generateReport();
         if (!analysis.hasEnoughData) {

@@ -1,34 +1,63 @@
-# smartsteps
+# SmartSteps frontend
 
-A new Flutter project.
+Flutter application for the SmartSteps safety lesson game.
 
-## Offline lesson catalog
+## Prerequisites
 
-The app currently ships with a hard-coded offline lesson catalog so it can be
-tested without the ASP.NET backend. Lesson data lives in
-`lib/data/offline_situation_catalog.dart`, and video/voice files are bundled
-from `assets/videos/*` and `assets/voices/*`.
+- Flutter 3.44 or newer on the stable channel
+- Dart 3.11 or newer
+- Chrome for Web development, or an Android emulator/device
 
-To add a quick pilot lesson, add the media files under `assets/`, register the
-folder in `pubspec.yaml` when needed, then add the matching
-`SituationDetail` entry to the offline catalog.
+## Setup
 
-## Local profile and Premium
+```powershell
+cd Frontend
+flutter pub get
+flutter analyze
+flutter test
+```
 
-The first-login survey is stored as `child_profile.json` in the app documents
-directory. For the MVP Premium flow, users can enter the code `PREMIUM`; the app
-updates the same local profile file and displays the Premium plan in-app.
+Run Web against the local backend. Port `3000` is fixed so it matches the
+default backend CORS configuration:
 
-## Getting Started
+```powershell
+flutter run -d chrome --web-port=3000 `
+  --dart-define=SMARTSTEPS_API_BASE_URL=http://localhost:8080
+```
 
-This project is a starting point for a Flutter application.
+For an Android emulator, use:
 
-A few resources to get you started if this is your first Flutter project:
+```powershell
+flutter run `
+  --dart-define=SMARTSTEPS_API_BASE_URL=http://10.0.2.2:8080
+```
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+## Optional Supabase configuration
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+Avatar uploads use Supabase only when both required values are provided. Never
+pass a service-role key to the Flutter client.
+
+```powershell
+flutter run -d chrome --web-port=3000 `
+  --dart-define=SMARTSTEPS_API_BASE_URL=http://localhost:8080 `
+  --dart-define=SUPABASE_URL=https://YOUR_PROJECT.supabase.co `
+  --dart-define=SUPABASE_ANON_KEY=YOUR_PUBLISHABLE_KEY `
+  --dart-define=SUPABASE_AVATAR_BUCKET=avatars
+```
+
+## Build Web
+
+```powershell
+flutter build web --release
+```
+
+The deployable output is written to `build/web`. Vercel uses
+`scripts/vercel_build.sh`; `GA_MEASUREMENT_ID` and `VERCEL_BASE_HREF` are
+optional deployment environment variables.
+
+## Project data
+
+- Offline lessons: `lib/data/offline_situation_catalog.dart`
+- Bundled media: `assets/`
+- Local child profile: `child_profile.json` in the app documents directory
+- MVP Premium code: `PREMIUM`

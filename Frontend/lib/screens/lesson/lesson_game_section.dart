@@ -6815,7 +6815,6 @@ class _GlassPanel extends StatelessWidget {
 
 class _PillButton extends StatelessWidget {
   const _PillButton({
-    super.key,
     required this.label,
     required this.icon,
     required this.onPressed,

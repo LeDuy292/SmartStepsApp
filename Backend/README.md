@@ -1,6 +1,45 @@
 # SmartStepsServer
 Source code server for SmartSteps application.
 
+## Local setup
+
+Requirements:
+
+- .NET 8 SDK or newer
+- PostgreSQL 14 or newer, or a reachable PostgreSQL-compatible database
+
+Create the local environment file from the committed template and replace the
+placeholder database/JWT values:
+
+```powershell
+Copy-Item .env.example .env
+dotnet tool restore
+dotnet restore
+dotnet build --no-restore
+dotnet run --no-build
+```
+
+The API listens on `http://localhost:8080` by default. Verify it with:
+
+```powershell
+Invoke-WebRequest http://localhost:8080/health -UseBasicParsing
+```
+
+Pending EF Core migrations are applied automatically after PostgreSQL becomes
+reachable. Swagger is available at `/swagger` in Development or when
+`Swagger__Enabled=true`.
+
+Google login needs `GoogleAuth__ClientId`. Password-recovery email needs all
+`EmailSettings__*` values. Cloudinary, payOS and DeepSeek are optional for
+basic local startup; do not commit their credentials to `appsettings.json`.
+
+To inspect or apply migrations manually:
+
+```powershell
+dotnet ef migrations list
+dotnet ef database update
+```
+
 ## Seeded situation content
 
 The SmartSteps lesson catalog is configured in `SmartStepsDbContext` with EF

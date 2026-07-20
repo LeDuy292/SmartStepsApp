@@ -37,7 +37,8 @@ public sealed class CloudinaryMediaService : ICloudinaryMediaService
             ["expires_at"] = expiresAt.ToString(CultureInfo.InvariantCulture),
             ["format"] = asset.Format,
             ["public_id"] = asset.PublicId,
-            ["timestamp"] = timestamp.ToString(CultureInfo.InvariantCulture)
+            ["timestamp"] = timestamp.ToString(CultureInfo.InvariantCulture),
+            ["type"] = _options.DeliveryType
         };
 
         var signature = CreateSignature(signedParameters, _options.ApiSecret);
