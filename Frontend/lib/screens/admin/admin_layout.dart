@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../../services/auth_service.dart';
+import '../../services/local_profile_storage.dart';
+import '../login_screen.dart';
 import '../../theme/duo_theme.dart';
 import 'dashboard/admin_dashboard_view.dart';
 import 'users/user_list_view.dart';
@@ -62,9 +64,20 @@ class _AdminLayoutState extends State<AdminLayout> {
                     onPressed: () async {
                       await AuthService().logout();
                       if (context.mounted) {
-                        // Assuming login screen will handle this when auth token is gone
-                        // or we can push directly to LoginScreen if imported
-                        Navigator.of(context).popUntil((route) => route.isFirst);
+                        Navigator.of(context).pushAndRemoveUntil(
+                          MaterialPageRoute<void>(
+                            builder: (_) => LoginScreen(
+                              profileStorage: const LocalProfileStorage(),
+                              onLogin: (ctx) {
+                                Navigator.of(ctx).pushReplacement(
+                                  MaterialPageRoute(builder: (_) => const AdminLayout()),
+                                );
+                              },
+                              onRegistrationCompleted: (_) {},
+                            ),
+                          ),
+                          (route) => false,
+                        );
                       }
                     },
                   ),
