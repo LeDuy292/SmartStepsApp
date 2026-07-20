@@ -46,14 +46,13 @@ builder.Services.AddDbContext<SmartStepsDbContext>(options =>
         builder.Configuration.GetConnectionString("DefaultConnection"),
         npgsqlOptions => npgsqlOptions.EnableRetryOnFailure()));
 
-builder.Services.Configure<CloudinaryMediaOptions>(
-    builder.Configuration.GetSection(CloudinaryMediaOptions.SectionName));
+builder.Services.Configure<SupabaseOptions>(
+    builder.Configuration.GetSection("Supabase"));
 builder.Services.Configure<PayOsOptions>(
     builder.Configuration.GetSection(PayOsOptions.SectionName));
 builder.Services.Configure<DeepSeekOptions>(
     builder.Configuration.GetSection(DeepSeekOptions.SectionName));
 
-builder.Services.AddHttpClient<ICloudinaryMediaService, CloudinaryMediaService>();
 builder.Services.AddHttpClient<IPayOsService, PayOsService>();
 builder.Services.AddHttpClient<IAiNarrativeService, DeepSeekNarrativeService>((serviceProvider, client) =>
 {
