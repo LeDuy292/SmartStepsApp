@@ -91,9 +91,11 @@ class _SituationFormDialogState extends State<SituationFormDialog> {
         widget.situation == null ? 'Thêm Bài học mới' : 'Cài đặt Bài học',
       ),
       content: SingleChildScrollView(
-        child: Form(
-          key: _formKey,
-          child: Column(
+        child: SizedBox(
+          width: (MediaQuery.of(context).size.width * 0.9).clamp(280.0, 480.0),
+          child: Form(
+            key: _formKey,
+            child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               DropdownButtonFormField<int>(
@@ -180,6 +182,7 @@ class _SituationFormDialogState extends State<SituationFormDialog> {
             ],
           ),
         ),
+      ),
       ),
       actions: [
         TextButton(

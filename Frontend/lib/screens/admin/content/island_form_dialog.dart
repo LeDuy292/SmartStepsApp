@@ -75,57 +75,60 @@ class _IslandFormDialogState extends State<IslandFormDialog> {
     return AlertDialog(
       title: Text(widget.island == null ? 'Thêm Đảo mới' : 'Chỉnh sửa Đảo'),
       content: SingleChildScrollView(
-        child: Form(
-          key: _formKey,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextFormField(
-                controller: _nameCtrl,
-                decoration: const InputDecoration(
-                  labelText: 'Tên Đảo (*)',
-                  border: OutlineInputBorder(),
-                ),
-                validator: (v) =>
-                    (v == null || v.isEmpty) ? 'Vui lòng nhập tên đảo' : null,
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _descCtrl,
-                decoration: const InputDecoration(
-                  labelText: 'Mô tả',
-                  border: OutlineInputBorder(),
-                ),
-                maxLines: 3,
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _orderCtrl,
-                decoration: const InputDecoration(
-                  labelText: 'Thứ tự hiển thị',
-                  border: OutlineInputBorder(),
-                ),
-                keyboardType: TextInputType.number,
-              ),
-              const SizedBox(height: 16),
-              DropdownButtonFormField<String>(
-                initialValue: _status,
-                decoration: const InputDecoration(
-                  labelText: 'Trạng thái',
-                  border: OutlineInputBorder(),
-                ),
-                items: const [
-                  DropdownMenuItem(
-                    value: 'Active',
-                    child: Text('Hiển thị (Active)'),
+        child: SizedBox(
+          width: (MediaQuery.of(context).size.width * 0.9).clamp(280.0, 480.0),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextFormField(
+                  controller: _nameCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Tên Đảo (*)',
+                    border: OutlineInputBorder(),
                   ),
-                  DropdownMenuItem(value: 'Hidden', child: Text('Ẩn (Hidden)')),
-                ],
-                onChanged: (v) {
-                  if (v != null) setState(() => _status = v);
-                },
-              ),
-            ],
+                  validator: (v) =>
+                      (v == null || v.isEmpty) ? 'Vui lòng nhập tên đảo' : null,
+                ),
+                const SizedBox(height: 16),
+                TextFormField(
+                  controller: _descCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Mô tả',
+                    border: OutlineInputBorder(),
+                  ),
+                  maxLines: 3,
+                ),
+                const SizedBox(height: 16),
+                TextFormField(
+                  controller: _orderCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Thứ tự hiển thị',
+                    border: OutlineInputBorder(),
+                  ),
+                  keyboardType: TextInputType.number,
+                ),
+                const SizedBox(height: 16),
+                DropdownButtonFormField<String>(
+                  initialValue: _status,
+                  decoration: const InputDecoration(
+                    labelText: 'Trạng thái',
+                    border: OutlineInputBorder(),
+                  ),
+                  items: const [
+                    DropdownMenuItem(
+                      value: 'Active',
+                      child: Text('Hiển thị (Active)'),
+                    ),
+                    DropdownMenuItem(value: 'Hidden', child: Text('Ẩn (Hidden)')),
+                  ],
+                  onChanged: (v) {
+                    if (v != null) setState(() => _status = v);
+                  },
+                ),
+              ],
+            ),
           ),
         ),
       ),

@@ -48,6 +48,7 @@ public class Flashcard
 
     // Navigation properties
     [ForeignKey(nameof(SituationId))]
+    [System.Text.Json.Serialization.JsonIgnore]
     public Situation Situation { get; set; } = null!;
 
     public ICollection<UserAnswer> UserAnswers { get; set; } = new List<UserAnswer>();

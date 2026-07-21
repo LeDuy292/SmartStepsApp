@@ -68,9 +68,11 @@ class _UserFormDialogState extends State<UserFormDialog> {
         widget.user == null ? 'Thêm người dùng' : 'Chỉnh sửa người dùng',
       ),
       content: SingleChildScrollView(
-        child: Form(
-          key: _formKey,
-          child: Column(
+        child: SizedBox(
+          width: (MediaQuery.of(context).size.width * 0.9).clamp(280.0, 480.0),
+          child: Form(
+            key: _formKey,
+            child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               TextFormField(
@@ -110,6 +112,7 @@ class _UserFormDialogState extends State<UserFormDialog> {
             ],
           ),
         ),
+      ),
       ),
       actions: [
         TextButton(

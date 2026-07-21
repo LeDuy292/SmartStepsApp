@@ -152,16 +152,24 @@ public class AdminSituationsController : ControllerBase
     // --- Steps Management ---
     
     [HttpPost("{id}/steps")]
-    public async Task<IActionResult> CreateStep(int id, [FromBody] SituationStep step)
+    public async Task<IActionResult> CreateStep(int id, [FromBody] StepCreateDto dto)
     {
-        step.SituationId = id;
+        var step = new SituationStep
+        {
+            SituationId = id,
+            StepType = dto.StepType,
+            Content = dto.Content,
+            MediaUrl = dto.MediaUrl,
+            OrderIndex = dto.OrderIndex,
+            CreatedAt = DateTime.UtcNow
+        };
         _context.SituationSteps.Add(step);
         await _context.SaveChangesAsync();
         return Ok(step);
     }
 
     [HttpPut("steps/{stepId}")]
-    public async Task<IActionResult> UpdateStep(int stepId, [FromBody] SituationStep dto)
+    public async Task<IActionResult> UpdateStep(int stepId, [FromBody] StepCreateDto dto)
     {
         var step = await _context.SituationSteps.FindAsync(stepId);
         if (step == null) return NotFound();
@@ -189,16 +197,26 @@ public class AdminSituationsController : ControllerBase
     // --- Flashcard Management ---
 
     [HttpPost("{id}/flashcards")]
-    public async Task<IActionResult> CreateFlashcard(int id, [FromBody] Flashcard fc)
+    public async Task<IActionResult> CreateFlashcard(int id, [FromBody] FlashcardCreateDto dto)
     {
-        fc.SituationId = id;
+        var fc = new Flashcard
+        {
+            SituationId = id,
+            Question = dto.Question,
+            OptionA = dto.OptionA,
+            OptionB = dto.OptionB,
+            CorrectAnswer = dto.CorrectAnswer,
+            CorrectFeedback = dto.CorrectFeedback,
+            WrongFeedback = dto.WrongFeedback,
+            CreatedAt = DateTime.UtcNow
+        };
         _context.Flashcards.Add(fc);
         await _context.SaveChangesAsync();
         return Ok(fc);
     }
 
     [HttpPut("flashcards/{fcId}")]
-    public async Task<IActionResult> UpdateFlashcard(int fcId, [FromBody] Flashcard dto)
+    public async Task<IActionResult> UpdateFlashcard(int fcId, [FromBody] FlashcardCreateDto dto)
     {
         var fc = await _context.Flashcards.FindAsync(fcId);
         if (fc == null) return NotFound();
@@ -246,4 +264,25 @@ public class SituationCreateDto
 public class SituationUpdateDto : SituationCreateDto
 {
     public string Status { get; set; } = null!;
+}
+
+public class StepCreateDto
+{
+    public string StepType { get; set; } = null!;
+    public string? Content { get; set; }
+    public string? MediaUrl { get; set; }
+    public int OrderIndex { get; set; }
+}
+
+public class FlashcardCreateDto
+{
+    public string Question { get; set; } = null!;
+    public string OptionA { get; set; } = null!;
+    public string OptionB { get; set; } = null!;
+    public string CorrectAnswer { get; set; } = null!;
+    public string? CorrectFeedback { get; set; }
+    public string? WrongFeedback { get; set; }
+    public string? QuestionVoiceUrl { get; set; }
+    public string? OptionAVoiceUrl { get; set; }
+    public string? OptionBVoiceUrl { get; set; }
 }

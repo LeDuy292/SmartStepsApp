@@ -72,22 +72,48 @@ class _SkillListViewState extends State<SkillListView> {
       children: [
         Padding(
           padding: const EdgeInsets.all(16.0),
-          child: Row(
-            children: [
-              Text('Quản lý Kỹ năng (Skills)', style: Theme.of(context).textTheme.headlineSmall),
-              const Spacer(),
-              FilledButton.icon(
-                onPressed: () async {
-                  final result = await showDialog(
-                    context: context,
-                    builder: (_) => const SkillFormDialog(),
-                  );
-                  if (result == true) _fetchSkills();
-                },
-                icon: const Icon(Icons.add),
-                label: const Text('Thêm Kỹ năng mới'),
-              )
-            ],
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final isMobile = constraints.maxWidth < 600;
+              if (isMobile) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Text('Quản lý Kỹ năng', style: Theme.of(context).textTheme.titleLarge),
+                    const SizedBox(height: 8),
+                    FilledButton.icon(
+                      onPressed: () async {
+                        final result = await showDialog(
+                          context: context,
+                          builder: (_) => const SkillFormDialog(),
+                        );
+                        if (result == true) _fetchSkills();
+                      },
+                      icon: const Icon(Icons.add),
+                      label: const Text('Thêm Kỹ năng'),
+                    ),
+                  ],
+                );
+              }
+
+              return Row(
+                children: [
+                  Text('Quản lý Kỹ năng (Skills)', style: Theme.of(context).textTheme.headlineSmall),
+                  const Spacer(),
+                  FilledButton.icon(
+                    onPressed: () async {
+                      final result = await showDialog(
+                        context: context,
+                        builder: (_) => const SkillFormDialog(),
+                      );
+                      if (result == true) _fetchSkills();
+                    },
+                    icon: const Icon(Icons.add),
+                    label: const Text('Thêm Kỹ năng mới'),
+                  ),
+                ],
+              );
+            },
           ),
         ),
         Expanded(
