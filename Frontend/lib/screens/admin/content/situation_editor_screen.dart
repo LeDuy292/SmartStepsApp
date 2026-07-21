@@ -64,13 +64,13 @@ class _SituationEditorScreenState extends State<SituationEditorScreen> {
               title: Text(isEditing ? 'Sửa Bước (Step)' : 'Thêm Bước Mới'),
               content: SingleChildScrollView(
                 child: SizedBox(
-                  width: 500,
+                  width: (MediaQuery.of(context).size.width * 0.9).clamp(280.0, 500.0),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       DropdownButtonFormField<String>(
-                        value: stepType,
+                        initialValue: stepType,
                         decoration: const InputDecoration(
                           labelText: 'Loại bước (Step Type)',
                           border: OutlineInputBorder(),
@@ -78,8 +78,8 @@ class _SituationEditorScreenState extends State<SituationEditorScreen> {
                         items: const [
                           DropdownMenuItem(value: 'Intro', child: Text('Intro')),
                           DropdownMenuItem(value: 'Story', child: Text('Story')),
-                          DropdownMenuItem(value: 'Question', child: Text('Question')),
-                          DropdownMenuItem(value: 'Outro', child: Text('Outro')),
+                          DropdownMenuItem(value: 'Flashcard', child: Text('Flashcard')),
+                          DropdownMenuItem(value: 'Result', child: Text('Result')),
                         ],
                         onChanged: (val) {
                           if (val != null) setDialogState(() => stepType = val);
@@ -260,7 +260,7 @@ class _SituationEditorScreenState extends State<SituationEditorScreen> {
               title: Text(isEditing ? 'Sửa Flashcard' : 'Thêm Flashcard Mới'),
               content: SingleChildScrollView(
                 child: SizedBox(
-                  width: 500,
+                  width: (MediaQuery.of(context).size.width * 0.9).clamp(280.0, 500.0),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
@@ -290,7 +290,7 @@ class _SituationEditorScreenState extends State<SituationEditorScreen> {
                       ),
                       const SizedBox(height: 16),
                       DropdownButtonFormField<String>(
-                        value: correctAnswer,
+                        initialValue: correctAnswer,
                         decoration: const InputDecoration(
                           labelText: 'Đáp án đúng (Correct Answer)',
                           border: OutlineInputBorder(),
@@ -428,169 +428,206 @@ class _SituationEditorScreenState extends State<SituationEditorScreen> {
     final steps = _situation!['steps'] as List<dynamic>? ?? [];
     final flashcards = _situation!['flashcards'] as List<dynamic>? ?? [];
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('Soạn thảo bài học: ${_situation!['title']}'),
-        backgroundColor: DuoColors.background,
-        scrolledUnderElevation: 0,
-      ),
-      backgroundColor: DuoColors.background,
-      body: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // STEPS COLUMN
-          Expanded(
-            child: Card(
-              margin: const EdgeInsets.all(16),
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text('Các Bước (Steps)', style: Theme.of(context).textTheme.titleLarge),
-                        FilledButton.icon(
-                          onPressed: () => _showStepDialog(),
-                          icon: const Icon(Icons.add),
-                          label: const Text('Thêm Step'),
-                        ),
-                      ],
-                    ),
-                    const Divider(),
-                    Expanded(
-                      child: steps.isEmpty
-                          ? const Center(child: Text('Chưa có bước nào trong bài học'))
-                          : ListView.builder(
-                              itemCount: steps.length,
-                              itemBuilder: (context, index) {
-                                final step = steps[index];
-                                final hasVideo = step['mediaUrl'] != null && step['mediaUrl'].toString().isNotEmpty;
-                                return Card(
-                                  margin: const EdgeInsets.symmetric(vertical: 4),
-                                  child: ListTile(
-                                    leading: CircleAvatar(child: Text(step['orderIndex'].toString())),
-                                    title: Row(
-                                      children: [
-                                        Text(
-                                          step['stepType'] ?? 'Step',
-                                          style: const TextStyle(fontWeight: FontWeight.bold),
-                                        ),
-                                        if (hasVideo) ...[
-                                          const SizedBox(width: 8),
-                                          const Icon(Icons.ondemand_video, size: 18, color: Colors.blue),
-                                        ],
-                                      ],
-                                    ),
-                                    subtitle: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        if (step['content'] != null && step['content'].toString().isNotEmpty)
-                                          Text(step['content'], maxLines: 2, overflow: TextOverflow.ellipsis),
-                                        if (hasVideo)
-                                          Text(
-                                            'Media: ${step['mediaUrl']}',
-                                            style: const TextStyle(fontSize: 12, color: Colors.blueGrey),
-                                          ),
-                                      ],
-                                    ),
-                                    trailing: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        IconButton(
-                                          icon: const Icon(Icons.edit, color: Colors.blue),
-                                          onPressed: () => _showStepDialog(step),
-                                        ),
-                                        IconButton(
-                                          icon: const Icon(Icons.delete, color: Colors.red),
-                                          onPressed: () => _deleteStep(step['stepId']),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                );
-                              },
-                            ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isWide = constraints.maxWidth >= 900;
 
-          // FLASHCARDS COLUMN
-          Expanded(
-            child: Card(
-              margin: const EdgeInsets.all(16),
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text('Câu hỏi (Flashcards)', style: Theme.of(context).textTheme.titleLarge),
-                        FilledButton.icon(
-                          onPressed: () => _showFlashcardDialog(),
-                          icon: const Icon(Icons.add),
-                          label: const Text('Thêm Câu Hỏi'),
-                          style: FilledButton.styleFrom(backgroundColor: DuoColors.primaryYellow, foregroundColor: Colors.black),
-                        ),
-                      ],
-                    ),
-                    const Divider(),
-                    Expanded(
-                      child: flashcards.isEmpty
-                          ? const Center(child: Text('Chưa có câu hỏi nào'))
-                          : ListView.builder(
-                              itemCount: flashcards.length,
-                              itemBuilder: (context, index) {
-                                final fc = flashcards[index];
-                                return Card(
-                                  color: Colors.grey[50],
-                                  margin: const EdgeInsets.symmetric(vertical: 4),
-                                  child: Padding(
-                                    padding: const EdgeInsets.all(16.0),
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Text('Q: ${fc['question']}', style: const TextStyle(fontWeight: FontWeight.bold)),
-                                        const SizedBox(height: 8),
-                                        Text('A: ${fc['optionA']} ${fc['correctAnswer'] == 'A' ? '(Đúng)' : ''}',
-                                            style: TextStyle(color: fc['correctAnswer'] == 'A' ? Colors.green : Colors.black)),
-                                        Text('B: ${fc['optionB']} ${fc['correctAnswer'] == 'B' ? '(Đúng)' : ''}',
-                                            style: TextStyle(color: fc['correctAnswer'] == 'B' ? Colors.green : Colors.black)),
-                                        const SizedBox(height: 8),
-                                        Row(
-                                          mainAxisAlignment: MainAxisAlignment.end,
-                                          children: [
-                                            TextButton.icon(
-                                              icon: const Icon(Icons.edit, color: Colors.blue),
-                                              label: const Text('Sửa'),
-                                              onPressed: () => _showFlashcardDialog(fc),
-                                            ),
-                                            TextButton.icon(
-                                              icon: const Icon(Icons.delete, color: Colors.red),
-                                              label: const Text('Xóa', style: TextStyle(color: Colors.red)),
-                                              onPressed: () => _deleteFlashcard(fc['flashcardId']),
-                                            ),
-                                          ],
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                );
-                              },
-                            ),
-                    ),
+        if (!isWide) {
+          return DefaultTabController(
+            length: 2,
+            child: Scaffold(
+              appBar: AppBar(
+                title: Text('Soạn thảo: ${_situation!['title']}'),
+                backgroundColor: DuoColors.background,
+                scrolledUnderElevation: 0,
+                bottom: const TabBar(
+                  tabs: [
+                    Tab(icon: Icon(Icons.list_alt), text: 'Các Bước (Steps)'),
+                    Tab(icon: Icon(Icons.quiz), text: 'Câu hỏi (Flashcards)'),
                   ],
                 ),
               ),
+              backgroundColor: DuoColors.background,
+              body: TabBarView(
+                children: [
+                  _buildStepsSection(steps),
+                  _buildFlashcardsSection(flashcards),
+                ],
+              ),
             ),
+          );
+        }
+
+        return Scaffold(
+          appBar: AppBar(
+            title: Text('Soạn thảo bài học: ${_situation!['title']}'),
+            backgroundColor: DuoColors.background,
+            scrolledUnderElevation: 0,
           ),
-        ],
+          backgroundColor: DuoColors.background,
+          body: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(child: _buildStepsSection(steps)),
+              Expanded(child: _buildFlashcardsSection(flashcards)),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildStepsSection(List<dynamic> steps) {
+    return Card(
+      margin: const EdgeInsets.all(16),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Text('Các Bước (Steps)', style: Theme.of(context).textTheme.titleLarge),
+                ),
+                FilledButton.icon(
+                  onPressed: () => _showStepDialog(),
+                  icon: const Icon(Icons.add),
+                  label: const Text('Thêm Step'),
+                ),
+              ],
+            ),
+            const Divider(),
+            Expanded(
+              child: steps.isEmpty
+                  ? const Center(child: Text('Chưa có bước nào trong bài học'))
+                  : ListView.builder(
+                      itemCount: steps.length,
+                      itemBuilder: (context, index) {
+                        final step = steps[index];
+                        final hasVideo = step['mediaUrl'] != null && step['mediaUrl'].toString().isNotEmpty;
+                        return Card(
+                          margin: const EdgeInsets.symmetric(vertical: 4),
+                          child: ListTile(
+                            leading: CircleAvatar(child: Text(step['orderIndex'].toString())),
+                            title: Row(
+                              children: [
+                                Text(
+                                  step['stepType'] ?? 'Step',
+                                  style: const TextStyle(fontWeight: FontWeight.bold),
+                                ),
+                                if (hasVideo) ...[
+                                  const SizedBox(width: 8),
+                                  const Icon(Icons.ondemand_video, size: 18, color: Colors.blue),
+                                ],
+                              ],
+                            ),
+                            subtitle: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                if (step['content'] != null && step['content'].toString().isNotEmpty)
+                                  Text(step['content'], maxLines: 2, overflow: TextOverflow.ellipsis),
+                                if (hasVideo)
+                                  Text(
+                                    'Media: ${step['mediaUrl']}',
+                                    style: const TextStyle(fontSize: 12, color: Colors.blueGrey),
+                                  ),
+                              ],
+                            ),
+                            trailing: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                IconButton(
+                                  icon: const Icon(Icons.edit, color: Colors.blue),
+                                  onPressed: () => _showStepDialog(step),
+                                ),
+                                IconButton(
+                                  icon: const Icon(Icons.delete, color: Colors.red),
+                                  onPressed: () => _deleteStep(step['stepId']),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFlashcardsSection(List<dynamic> flashcards) {
+    return Card(
+      margin: const EdgeInsets.all(16),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Text('Câu hỏi (Flashcards)', style: Theme.of(context).textTheme.titleLarge),
+                ),
+                FilledButton.icon(
+                  onPressed: () => _showFlashcardDialog(),
+                  icon: const Icon(Icons.add),
+                  label: const Text('Thêm Câu Hỏi'),
+                  style: FilledButton.styleFrom(backgroundColor: DuoColors.primaryYellow, foregroundColor: Colors.black),
+                ),
+              ],
+            ),
+            const Divider(),
+            Expanded(
+              child: flashcards.isEmpty
+                  ? const Center(child: Text('Chưa có câu hỏi nào'))
+                  : ListView.builder(
+                      itemCount: flashcards.length,
+                      itemBuilder: (context, index) {
+                        final fc = flashcards[index];
+                        return Card(
+                          color: Colors.grey[50],
+                          margin: const EdgeInsets.symmetric(vertical: 4),
+                          child: Padding(
+                            padding: const EdgeInsets.all(16.0),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text('Q: ${fc['question']}', style: const TextStyle(fontWeight: FontWeight.bold)),
+                                const SizedBox(height: 8),
+                                Text('A: ${fc['optionA']} ${fc['correctAnswer'] == 'A' ? '(Đúng)' : ''}',
+                                    style: TextStyle(color: fc['correctAnswer'] == 'A' ? Colors.green : Colors.black)),
+                                Text('B: ${fc['optionB']} ${fc['correctAnswer'] == 'B' ? '(Đúng)' : ''}',
+                                    style: TextStyle(color: fc['correctAnswer'] == 'B' ? Colors.green : Colors.black)),
+                                const SizedBox(height: 8),
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.end,
+                                  children: [
+                                    TextButton.icon(
+                                      icon: const Icon(Icons.edit, color: Colors.blue),
+                                      label: const Text('Sửa'),
+                                      onPressed: () => _showFlashcardDialog(fc),
+                                    ),
+                                    TextButton.icon(
+                                      icon: const Icon(Icons.delete, color: Colors.red),
+                                      label: const Text('Xóa', style: TextStyle(color: Colors.red)),
+                                      onPressed: () => _deleteFlashcard(fc['flashcardId']),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+            ),
+          ],
+        ),
       ),
     );
   }

@@ -239,10 +239,13 @@ class AuthService implements AuthGateway {
     if (token == null) return null;
 
     Map<String, dynamic> decodedToken = JwtDecoder.decode(token);
-    // ASP.NET Core usually puts role in 'http://schemas.microsoft.com/ws/2008/06/identity/claims/role'
-    // or just 'role'.
-    return decodedToken['role'] ??
+    var roleClaim = decodedToken['role'] ??
         decodedToken['http://schemas.microsoft.com/ws/2008/06/identity/claims/role'];
+    
+    if (roleClaim is List) {
+      return roleClaim.isNotEmpty ? roleClaim.first.toString() : null;
+    }
+    return roleClaim?.toString();
   }
 
   Future<int?> getUserId() async {

@@ -398,22 +398,6 @@ class _LoginScreenState extends State<LoginScreen> {
                                         ),
                                       ),
                                     ),
-                              const SizedBox(width: 22),
-                              GestureDetector(
-                                onTap: () => _showFeatureInDevelopment(context),
-                                child: const _SocialButton(
-                                  label: 'Facebook',
-                                  child: Text(
-                                    'f',
-                                    style: TextStyle(
-                                      color: Color(0xFF1877F2),
-                                      fontSize: 34,
-                                      fontWeight: FontWeight.w900,
-                                      height: 1,
-                                    ),
-                                  ),
-                                ),
-                              ),
                             ],
                           ),
                         ],
@@ -430,11 +414,7 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 }
 
-void _showFeatureInDevelopment(BuildContext context) {
-  ScaffoldMessenger.of(context).showSnackBar(
-    const SnackBar(content: Text('Tính năng đang được phát triển.')),
-  );
-}
+
 
 void _showForgotPasswordDialog(BuildContext context, AuthGateway authGateway) {
   final TextEditingController forgotEmailController = TextEditingController();

@@ -83,25 +83,54 @@ class _IslandListViewState extends State<IslandListView> {
       children: [
         Padding(
           padding: const EdgeInsets.all(16.0),
-          child: Row(
-            children: [
-              Text(
-                'Quản lý Đảo (Nhóm bài học)',
-                style: Theme.of(context).textTheme.headlineSmall,
-              ),
-              const Spacer(),
-              FilledButton.icon(
-                onPressed: () async {
-                  final result = await showDialog(
-                    context: context,
-                    builder: (_) => const IslandFormDialog(),
-                  );
-                  if (result == true) _fetchIslands();
-                },
-                icon: const Icon(Icons.add),
-                label: const Text('Thêm Đảo mới'),
-              ),
-            ],
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final isMobile = constraints.maxWidth < 600;
+              if (isMobile) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Text(
+                      'Quản lý Đảo',
+                      style: Theme.of(context).textTheme.titleLarge,
+                    ),
+                    const SizedBox(height: 8),
+                    FilledButton.icon(
+                      onPressed: () async {
+                        final result = await showDialog(
+                          context: context,
+                          builder: (_) => const IslandFormDialog(),
+                        );
+                        if (result == true) _fetchIslands();
+                      },
+                      icon: const Icon(Icons.add),
+                      label: const Text('Thêm Đảo mới'),
+                    ),
+                  ],
+                );
+              }
+
+              return Row(
+                children: [
+                  Text(
+                    'Quản lý Đảo (Nhóm bài học)',
+                    style: Theme.of(context).textTheme.headlineSmall,
+                  ),
+                  const Spacer(),
+                  FilledButton.icon(
+                    onPressed: () async {
+                      final result = await showDialog(
+                        context: context,
+                        builder: (_) => const IslandFormDialog(),
+                      );
+                      if (result == true) _fetchIslands();
+                    },
+                    icon: const Icon(Icons.add),
+                    label: const Text('Thêm Đảo mới'),
+                  ),
+                ],
+              );
+            },
           ),
         ),
         Expanded(

@@ -54,23 +54,26 @@ class _SkillFormDialogState extends State<SkillFormDialog> {
     return AlertDialog(
       title: Text(widget.skill == null ? 'Thêm Kỹ năng mới' : 'Chỉnh sửa Kỹ năng'),
       content: SingleChildScrollView(
-        child: Form(
-          key: _formKey,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextFormField(
-                controller: _nameCtrl,
-                decoration: const InputDecoration(labelText: 'Tên Kỹ năng (*)', border: OutlineInputBorder()),
-                validator: (v) => (v == null || v.isEmpty) ? 'Vui lòng nhập tên kỹ năng' : null,
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _descCtrl,
-                decoration: const InputDecoration(labelText: 'Mô tả', border: OutlineInputBorder()),
-                maxLines: 3,
-              ),
-            ],
+        child: SizedBox(
+          width: (MediaQuery.of(context).size.width * 0.9).clamp(280.0, 480.0),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextFormField(
+                  controller: _nameCtrl,
+                  decoration: const InputDecoration(labelText: 'Tên Kỹ năng (*)', border: OutlineInputBorder()),
+                  validator: (v) => (v == null || v.isEmpty) ? 'Vui lòng nhập tên kỹ năng' : null,
+                ),
+                const SizedBox(height: 16),
+                TextFormField(
+                  controller: _descCtrl,
+                  decoration: const InputDecoration(labelText: 'Mô tả', border: OutlineInputBorder()),
+                  maxLines: 3,
+                ),
+              ],
+            ),
           ),
         ),
       ),

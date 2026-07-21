@@ -102,15 +102,16 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
                 // Metrics Grid
                 LayoutBuilder(
                   builder: (context, constraints) {
-                    final isWide = constraints.maxWidth > 900;
-                    final crossAxisCount = isWide ? 4 : 2;
+                    final width = constraints.maxWidth;
+                    final crossAxisCount = width > 1100 ? 4 : (width > 550 ? 2 : 1);
+                    final childAspectRatio = width > 1100 ? 1.4 : (width > 550 ? 1.6 : 2.4);
 
                     return GridView.count(
                       crossAxisCount: crossAxisCount,
                       crossAxisSpacing: 16,
                       mainAxisSpacing: 16,
                       shrinkWrap: true,
-                      childAspectRatio: isWide ? 1.4 : 1.6,
+                      childAspectRatio: childAspectRatio,
                       physics: const NeverScrollableScrollPhysics(),
                       children: [
                         _StatCard(

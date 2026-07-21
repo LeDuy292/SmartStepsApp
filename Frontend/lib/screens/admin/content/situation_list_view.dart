@@ -89,58 +89,122 @@ class _SituationListViewState extends State<SituationListView> {
       children: [
         Padding(
           padding: const EdgeInsets.all(16.0),
-          child: Row(
-            children: [
-              Text(
-                'Quản lý Bài học (Situations)',
-                style: Theme.of(context).textTheme.headlineSmall,
-              ),
-              const SizedBox(width: 32),
-              Expanded(
-                child: DropdownButtonFormField<int?>(
-                  initialValue: _selectedIslandId,
-                  decoration: const InputDecoration(
-                    labelText: 'Lọc theo Đảo',
-                    border: OutlineInputBorder(),
-                    contentPadding: EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 8,
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final isMobile = constraints.maxWidth < 700;
+              if (isMobile) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Quản lý Bài học',
+                          style: Theme.of(context).textTheme.titleLarge,
+                        ),
+                        FilledButton.icon(
+                          onPressed: () async {
+                            final result = await showDialog(
+                              context: context,
+                              builder: (_) => SituationFormDialog(
+                                islands: _islands,
+                                selectedIslandId: _selectedIslandId,
+                              ),
+                            );
+                            if (result == true) _fetchData();
+                          },
+                          icon: const Icon(Icons.add),
+                          label: const Text('Thêm'),
+                        ),
+                      ],
                     ),
-                  ),
-                  items: [
-                    const DropdownMenuItem<int?>(
-                      value: null,
-                      child: Text('Tất cả các đảo'),
-                    ),
-                    ..._islands.map(
-                      (i) => DropdownMenuItem<int?>(
-                        value: i['islandId'],
-                        child: Text(i['name']),
+                    const SizedBox(height: 12),
+                    DropdownButtonFormField<int?>(
+                      initialValue: _selectedIslandId,
+                      decoration: const InputDecoration(
+                        labelText: 'Lọc theo Đảo',
+                        border: OutlineInputBorder(),
+                        contentPadding: EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 8,
+                        ),
                       ),
+                      items: [
+                        const DropdownMenuItem<int?>(
+                          value: null,
+                          child: Text('Tất cả các đảo'),
+                        ),
+                        ..._islands.map(
+                          (i) => DropdownMenuItem<int?>(
+                            value: i['islandId'],
+                            child: Text(i['name']),
+                          ),
+                        ),
+                      ],
+                      onChanged: (v) {
+                        _selectedIslandId = v;
+                        _fetchData();
+                      },
                     ),
                   ],
-                  onChanged: (v) {
-                    _selectedIslandId = v;
-                    _fetchData();
-                  },
-                ),
-              ),
-              const SizedBox(width: 16),
-              FilledButton.icon(
-                onPressed: () async {
-                  final result = await showDialog(
-                    context: context,
-                    builder: (_) => SituationFormDialog(
-                      islands: _islands,
-                      selectedIslandId: _selectedIslandId,
+                );
+              }
+
+              return Row(
+                children: [
+                  Text(
+                    'Quản lý Bài học (Situations)',
+                    style: Theme.of(context).textTheme.headlineSmall,
+                  ),
+                  const SizedBox(width: 32),
+                  Expanded(
+                    child: DropdownButtonFormField<int?>(
+                      initialValue: _selectedIslandId,
+                      decoration: const InputDecoration(
+                        labelText: 'Lọc theo Đảo',
+                        border: OutlineInputBorder(),
+                        contentPadding: EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 8,
+                        ),
+                      ),
+                      items: [
+                        const DropdownMenuItem<int?>(
+                          value: null,
+                          child: Text('Tất cả các đảo'),
+                        ),
+                        ..._islands.map(
+                          (i) => DropdownMenuItem<int?>(
+                            value: i['islandId'],
+                            child: Text(i['name']),
+                          ),
+                        ),
+                      ],
+                      onChanged: (v) {
+                        _selectedIslandId = v;
+                        _fetchData();
+                      },
                     ),
-                  );
-                  if (result == true) _fetchData();
-                },
-                icon: const Icon(Icons.add),
-                label: const Text('Thêm Bài học mới'),
-              ),
-            ],
+                  ),
+                  const SizedBox(width: 16),
+                  FilledButton.icon(
+                    onPressed: () async {
+                      final result = await showDialog(
+                        context: context,
+                        builder: (_) => SituationFormDialog(
+                          islands: _islands,
+                          selectedIslandId: _selectedIslandId,
+                        ),
+                      );
+                      if (result == true) _fetchData();
+                    },
+                    icon: const Icon(Icons.add),
+                    label: const Text('Thêm Bài học mới'),
+                  ),
+                ],
+              );
+            },
           ),
         ),
         Expanded(

@@ -111,98 +111,191 @@ class _UserListViewState extends State<UserListView> {
       children: [
         Padding(
           padding: const EdgeInsets.all(16.0),
-          child: Row(
-            children: [
-              Text(
-                'Quản lý người dùng',
-                style: Theme.of(context).textTheme.headlineSmall,
-              ),
-              const Spacer(),
-              FilledButton.icon(
-                onPressed: () async {
-                  final result = await showDialog(
-                    context: context,
-                    builder: (_) => const UserFormDialog(),
-                  );
-                  if (result == true) _fetchUsers();
-                },
-                icon: const Icon(Icons.add),
-                label: const Text('Thêm người dùng'),
-              ),
-            ],
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16.0),
-          child: Row(
-            children: [
-              Expanded(
-                flex: 2,
-                child: TextField(
-                  decoration: const InputDecoration(
-                    labelText: 'Tìm kiếm',
-                    prefixIcon: Icon(Icons.search),
-                    border: OutlineInputBorder(),
-                  ),
-                  onSubmitted: (val) {
-                    _searchQuery = val;
-                    _page = 1;
-                    _fetchUsers();
-                  },
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: DropdownButtonFormField<String>(
-                  initialValue: _selectedRole.isEmpty ? null : _selectedRole,
-                  decoration: const InputDecoration(
-                    labelText: 'Vai trò',
-                    border: OutlineInputBorder(),
-                  ),
-                  items: const [
-                    DropdownMenuItem(value: '', child: Text('Tất cả')),
-                    DropdownMenuItem(value: 'Child', child: Text('Trẻ em')),
-                    DropdownMenuItem(value: 'Parent', child: Text('Phụ huynh')),
-                    DropdownMenuItem(value: 'Admin', child: Text('Admin')),
-                  ],
-                  onChanged: (val) {
-                    if (val != null) {
-                      _selectedRole = val;
-                      _page = 1;
-                      _fetchUsers();
-                    }
-                  },
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: DropdownButtonFormField<String>(
-                  initialValue: _selectedStatus.isEmpty
-                      ? null
-                      : _selectedStatus,
-                  decoration: const InputDecoration(
-                    labelText: 'Trạng thái',
-                    border: OutlineInputBorder(),
-                  ),
-                  items: const [
-                    DropdownMenuItem(value: '', child: Text('Tất cả')),
-                    DropdownMenuItem(value: 'Active', child: Text('Hoạt động')),
-                    DropdownMenuItem(value: 'Locked', child: Text('Bị khóa')),
-                    DropdownMenuItem(
-                      value: 'Inactive',
-                      child: Text('Ngừng HD'),
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final isMobile = constraints.maxWidth < 600;
+              if (isMobile) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Quản lý người dùng',
+                          style: Theme.of(context).textTheme.titleLarge,
+                        ),
+                        FilledButton.icon(
+                          onPressed: () async {
+                            final result = await showDialog(
+                              context: context,
+                              builder: (_) => const UserFormDialog(),
+                            );
+                            if (result == true) _fetchUsers();
+                          },
+                          icon: const Icon(Icons.add),
+                          label: const Text('Thêm'),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      decoration: const InputDecoration(
+                        labelText: 'Tìm kiếm',
+                        prefixIcon: Icon(Icons.search),
+                        border: OutlineInputBorder(),
+                      ),
+                      onSubmitted: (val) {
+                        _searchQuery = val;
+                        _page = 1;
+                        _fetchUsers();
+                      },
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: DropdownButtonFormField<String>(
+                            initialValue: _selectedRole.isEmpty ? null : _selectedRole,
+                            decoration: const InputDecoration(
+                              labelText: 'Vai trò',
+                              border: OutlineInputBorder(),
+                            ),
+                            items: const [
+                              DropdownMenuItem(value: '', child: Text('Tất cả')),
+                              DropdownMenuItem(value: 'Child', child: Text('Trẻ em')),
+                              DropdownMenuItem(value: 'Parent', child: Text('Phụ huynh')),
+                              DropdownMenuItem(value: 'Admin', child: Text('Admin')),
+                            ],
+                            onChanged: (val) {
+                              if (val != null) {
+                                _selectedRole = val;
+                                _page = 1;
+                                _fetchUsers();
+                              }
+                            },
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: DropdownButtonFormField<String>(
+                            initialValue: _selectedStatus.isEmpty ? null : _selectedStatus,
+                            decoration: const InputDecoration(
+                              labelText: 'Trạng thái',
+                              border: OutlineInputBorder(),
+                            ),
+                            items: const [
+                              DropdownMenuItem(value: '', child: Text('Tất cả')),
+                              DropdownMenuItem(value: 'Active', child: Text('Hoạt động')),
+                              DropdownMenuItem(value: 'Locked', child: Text('Bị khóa')),
+                              DropdownMenuItem(value: 'Inactive', child: Text('Ngừng HD')),
+                            ],
+                            onChanged: (val) {
+                              if (val != null) {
+                                _selectedStatus = val;
+                                _page = 1;
+                                _fetchUsers();
+                              }
+                            },
+                          ),
+                        ),
+                      ],
                     ),
                   ],
-                  onChanged: (val) {
-                    if (val != null) {
-                      _selectedStatus = val;
-                      _page = 1;
-                      _fetchUsers();
-                    }
-                  },
-                ),
-              ),
-            ],
+                );
+              }
+
+              return Column(
+                children: [
+                  Row(
+                    children: [
+                      Text(
+                        'Quản lý người dùng',
+                        style: Theme.of(context).textTheme.headlineSmall,
+                      ),
+                      const Spacer(),
+                      FilledButton.icon(
+                        onPressed: () async {
+                          final result = await showDialog(
+                            context: context,
+                            builder: (_) => const UserFormDialog(),
+                          );
+                          if (result == true) _fetchUsers();
+                        },
+                        icon: const Icon(Icons.add),
+                        label: const Text('Thêm người dùng'),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      Expanded(
+                        flex: 2,
+                        child: TextField(
+                          decoration: const InputDecoration(
+                            labelText: 'Tìm kiếm',
+                            prefixIcon: Icon(Icons.search),
+                            border: OutlineInputBorder(),
+                          ),
+                          onSubmitted: (val) {
+                            _searchQuery = val;
+                            _page = 1;
+                            _fetchUsers();
+                          },
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: DropdownButtonFormField<String>(
+                          initialValue: _selectedRole.isEmpty ? null : _selectedRole,
+                          decoration: const InputDecoration(
+                            labelText: 'Vai trò',
+                            border: OutlineInputBorder(),
+                          ),
+                          items: const [
+                            DropdownMenuItem(value: '', child: Text('Tất cả')),
+                            DropdownMenuItem(value: 'Child', child: Text('Trẻ em')),
+                            DropdownMenuItem(value: 'Parent', child: Text('Phụ huynh')),
+                            DropdownMenuItem(value: 'Admin', child: Text('Admin')),
+                          ],
+                          onChanged: (val) {
+                            if (val != null) {
+                              _selectedRole = val;
+                              _page = 1;
+                              _fetchUsers();
+                            }
+                          },
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: DropdownButtonFormField<String>(
+                          initialValue: _selectedStatus.isEmpty ? null : _selectedStatus,
+                          decoration: const InputDecoration(
+                            labelText: 'Trạng thái',
+                            border: OutlineInputBorder(),
+                          ),
+                          items: const [
+                            DropdownMenuItem(value: '', child: Text('Tất cả')),
+                            DropdownMenuItem(value: 'Active', child: Text('Hoạt động')),
+                            DropdownMenuItem(value: 'Locked', child: Text('Bị khóa')),
+                            DropdownMenuItem(value: 'Inactive', child: Text('Ngừng HD')),
+                          ],
+                          onChanged: (val) {
+                            if (val != null) {
+                              _selectedStatus = val;
+                              _page = 1;
+                              _fetchUsers();
+                            }
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              );
+            },
           ),
         ),
         Expanded(

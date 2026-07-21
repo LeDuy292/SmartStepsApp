@@ -28,96 +28,168 @@ class _AdminLayoutState extends State<AdminLayout> {
     const SkillListView(),
   ];
 
+  final List<String> _titles = [
+    'Tổng Quan',
+    'Người Dùng',
+    'Nhóm Bài Học',
+    'Bài Học',
+    'Kỹ Năng',
+  ];
+
+  Future<void> _handleLogout() async {
+    await AuthService().logout();
+    if (mounted) {
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute<void>(
+          builder: (_) => LoginScreen(
+            profileStorage: const LocalProfileStorage(),
+            onLogin: (ctx) {
+              Navigator.of(ctx).pushReplacement(
+                MaterialPageRoute(builder: (_) => const AdminLayout()),
+              );
+            },
+            onRegistrationCompleted: (_) {},
+          ),
+        ),
+        (route) => false,
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: DuoColors.background,
-      body: Row(
-        children: [
-          NavigationRail(
-            backgroundColor: DuoColors.card,
-            selectedIndex: _selectedIndex,
-            onDestinationSelected: (int index) {
-              setState(() {
-                _selectedIndex = index;
-              });
-            },
-            extended: MediaQuery.of(context).size.width >= 800,
-            leading: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 20),
-              child: Image.asset(
-                'assets/images/logo.png', // Assuming there's a logo or use icon
-                width: 48,
-                height: 48,
-                errorBuilder: (context, error, stackTrace) =>
-                    const Icon(Icons.admin_panel_settings, size: 48, color: DuoColors.primaryYellow),
-              ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isMobile = constraints.maxWidth < 600;
+
+        if (isMobile) {
+          return Scaffold(
+            backgroundColor: DuoColors.background,
+            appBar: AppBar(
+              title: Text(_titles[_selectedIndex]),
+              backgroundColor: DuoColors.card,
+              elevation: 0,
+              actions: [
+                IconButton(
+                  icon: const Icon(Icons.logout, color: Colors.red),
+                  tooltip: 'Đăng xuất',
+                  onPressed: _handleLogout,
+                ),
+              ],
             ),
-            trailing: Expanded(
-              child: Align(
-                alignment: Alignment.bottomCenter,
-                child: Padding(
-                  padding: const EdgeInsets.only(bottom: 20),
-                  child: IconButton(
-                    icon: const Icon(Icons.logout, color: Colors.red),
-                    tooltip: 'Đăng xuất',
-                    onPressed: () async {
-                      await AuthService().logout();
-                      if (context.mounted) {
-                        Navigator.of(context).pushAndRemoveUntil(
-                          MaterialPageRoute<void>(
-                            builder: (_) => LoginScreen(
-                              profileStorage: const LocalProfileStorage(),
-                              onLogin: (ctx) {
-                                Navigator.of(ctx).pushReplacement(
-                                  MaterialPageRoute(builder: (_) => const AdminLayout()),
-                                );
-                              },
-                              onRegistrationCompleted: (_) {},
-                            ),
-                          ),
-                          (route) => false,
-                        );
-                      }
+            body: _views[_selectedIndex],
+            bottomNavigationBar: NavigationBar(
+              selectedIndex: _selectedIndex,
+              onDestinationSelected: (index) {
+                setState(() {
+                  _selectedIndex = index;
+                });
+              },
+              destinations: const [
+                NavigationDestination(
+                  icon: Icon(Icons.dashboard_outlined),
+                  selectedIcon: Icon(Icons.dashboard),
+                  label: 'Tổng quan',
+                ),
+                NavigationDestination(
+                  icon: Icon(Icons.people_outline),
+                  selectedIcon: Icon(Icons.people),
+                  label: 'Người dùng',
+                ),
+                NavigationDestination(
+                  icon: Icon(Icons.map_outlined),
+                  selectedIcon: Icon(Icons.map),
+                  label: 'Nhóm',
+                ),
+                NavigationDestination(
+                  icon: Icon(Icons.book_outlined),
+                  selectedIcon: Icon(Icons.book),
+                  label: 'Bài học',
+                ),
+                NavigationDestination(
+                  icon: Icon(Icons.star_outline),
+                  selectedIcon: Icon(Icons.star),
+                  label: 'Kỹ năng',
+                ),
+              ],
+            ),
+          );
+        }
+
+        return Scaffold(
+          backgroundColor: DuoColors.background,
+          body: Row(
+            children: [
+              NavigationRail(
+                backgroundColor: DuoColors.card,
+                selectedIndex: _selectedIndex,
+                onDestinationSelected: (int index) {
+                  setState(() {
+                    _selectedIndex = index;
+                  });
+                },
+                extended: constraints.maxWidth >= 900,
+                leading: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 20),
+                  child: Image.asset(
+                    'assets/images/logo/logo smartstep-01.webp',
+                    width: 48,
+                    height: 48,
+                    errorBuilder: (context, error, stackTrace) {
+                      return const Icon(Icons.admin_panel_settings,
+                          size: 48, color: DuoColors.primaryYellow);
                     },
                   ),
                 ),
+                trailing: Expanded(
+                  child: Align(
+                    alignment: Alignment.bottomCenter,
+                    child: Padding(
+                      padding: const EdgeInsets.only(bottom: 20),
+                      child: IconButton(
+                        icon: const Icon(Icons.logout, color: Colors.red),
+                        tooltip: 'Đăng xuất',
+                        onPressed: _handleLogout,
+                      ),
+                    ),
+                  ),
+                ),
+                destinations: const [
+                  NavigationRailDestination(
+                    icon: Icon(Icons.dashboard_outlined),
+                    selectedIcon: Icon(Icons.dashboard),
+                    label: Text('Tổng quan'),
+                  ),
+                  NavigationRailDestination(
+                    icon: Icon(Icons.people_outline),
+                    selectedIcon: Icon(Icons.people),
+                    label: Text('Người dùng'),
+                  ),
+                  NavigationRailDestination(
+                    icon: Icon(Icons.map_outlined),
+                    selectedIcon: Icon(Icons.map),
+                    label: Text('Nhóm bài học'),
+                  ),
+                  NavigationRailDestination(
+                    icon: Icon(Icons.book_outlined),
+                    selectedIcon: Icon(Icons.book),
+                    label: Text('Bài học'),
+                  ),
+                  NavigationRailDestination(
+                    icon: Icon(Icons.star_outline),
+                    selectedIcon: Icon(Icons.star),
+                    label: Text('Kỹ năng'),
+                  ),
+                ],
               ),
-            ),
-            destinations: const [
-              NavigationRailDestination(
-                icon: Icon(Icons.dashboard_outlined),
-                selectedIcon: Icon(Icons.dashboard),
-                label: Text('Tổng quan'),
-              ),
-              NavigationRailDestination(
-                icon: Icon(Icons.people_outline),
-                selectedIcon: Icon(Icons.people),
-                label: Text('Người dùng'),
-              ),
-              NavigationRailDestination(
-                icon: Icon(Icons.map_outlined),
-                selectedIcon: Icon(Icons.map),
-                label: Text('Nhóm bài học'),
-              ),
-              NavigationRailDestination(
-                icon: Icon(Icons.book_outlined),
-                selectedIcon: Icon(Icons.book),
-                label: Text('Bài học'),
-              ),
-              NavigationRailDestination(
-                icon: Icon(Icons.star_outline),
-                selectedIcon: Icon(Icons.star),
-                label: Text('Kỹ năng'),
+              const VerticalDivider(thickness: 1, width: 1, color: DuoColors.border),
+              Expanded(
+                child: _views[_selectedIndex],
               ),
             ],
           ),
-          const VerticalDivider(thickness: 1, width: 1, color: DuoColors.border),
-          Expanded(
-            child: _views[_selectedIndex],
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 }
