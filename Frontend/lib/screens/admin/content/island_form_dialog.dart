@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+
 import '../../../services/admin_api_service.dart';
+import '../admin_components.dart';
 
 class IslandFormDialog extends StatefulWidget {
-  final Map<String, dynamic>? island;
-
   const IslandFormDialog({super.key, this.island});
+
+  final Map<String, dynamic>? island;
 
   @override
   State<IslandFormDialog> createState() => _IslandFormDialogState();
@@ -15,10 +17,10 @@ class _IslandFormDialogState extends State<IslandFormDialog> {
   final _formKey = GlobalKey<FormState>();
   bool _isLoading = false;
 
-  late TextEditingController _nameCtrl;
-  late TextEditingController _descCtrl;
-  late TextEditingController _imgCtrl;
-  late TextEditingController _orderCtrl;
+  late final TextEditingController _nameCtrl;
+  late final TextEditingController _descCtrl;
+  late final TextEditingController _imgCtrl;
+  late final TextEditingController _orderCtrl;
   String _status = 'Active';
 
   @override
@@ -35,16 +37,25 @@ class _IslandFormDialogState extends State<IslandFormDialog> {
     _status = widget.island?['status'] ?? 'Active';
   }
 
+  @override
+  void dispose() {
+    _orderCtrl.dispose();
+    _imgCtrl.dispose();
+    _descCtrl.dispose();
+    _nameCtrl.dispose();
+    super.dispose();
+  }
+
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => _isLoading = true);
     try {
       final data = {
-        'name': _nameCtrl.text,
-        'description': _descCtrl.text,
-        'imageUrl': _imgCtrl.text,
-        'orderIndex': int.tryParse(_orderCtrl.text) ?? 1,
+        'name': _nameCtrl.text.trim(),
+        'description': _descCtrl.text.trim(),
+        'imageUrl': _imgCtrl.text.trim(),
+        'orderIndex': int.tryParse(_orderCtrl.text.trim()) ?? 1,
         'status': _status,
       };
 
@@ -54,9 +65,7 @@ class _IslandFormDialogState extends State<IslandFormDialog> {
         await _api.updateIsland(widget.island!['islandId'], data);
       }
 
-      if (mounted) {
-        Navigator.pop(context, true);
-      }
+      if (mounted) Navigator.pop(context, true);
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(
@@ -64,88 +73,132 @@ class _IslandFormDialogState extends State<IslandFormDialog> {
         ).showSnackBar(SnackBar(content: Text('Lỗi: $e')));
       }
     } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final isEditing = widget.island != null;
+
     return AlertDialog(
-      title: Text(widget.island == null ? 'Thêm Đảo mới' : 'Chỉnh sửa Đảo'),
+      insetPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 24),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+      title: Row(
+        children: [
+          Icon(
+            isEditing
+                ? Icons.edit_location_alt_rounded
+                : Icons.add_location_alt_rounded,
+            color: AdminColors.teal,
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(isEditing ? 'Chỉnh sửa nhóm' : 'Thêm nhóm bài học'),
+          ),
+        ],
+      ),
       content: SingleChildScrollView(
-        child: Form(
-          key: _formKey,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextFormField(
-                controller: _nameCtrl,
-                decoration: const InputDecoration(
-                  labelText: 'Tên Đảo (*)',
-                  border: OutlineInputBorder(),
-                ),
-                validator: (v) =>
-                    (v == null || v.isEmpty) ? 'Vui lòng nhập tên đảo' : null,
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _descCtrl,
-                decoration: const InputDecoration(
-                  labelText: 'Mô tả',
-                  border: OutlineInputBorder(),
-                ),
-                maxLines: 3,
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _orderCtrl,
-                decoration: const InputDecoration(
-                  labelText: 'Thứ tự hiển thị',
-                  border: OutlineInputBorder(),
-                ),
-                keyboardType: TextInputType.number,
-              ),
-              const SizedBox(height: 16),
-              DropdownButtonFormField<String>(
-                initialValue: _status,
-                decoration: const InputDecoration(
-                  labelText: 'Trạng thái',
-                  border: OutlineInputBorder(),
-                ),
-                items: const [
-                  DropdownMenuItem(
-                    value: 'Active',
-                    child: Text('Hiển thị (Active)'),
+        child: SizedBox(
+          width: (MediaQuery.of(context).size.width * 0.9).clamp(280.0, 480.0),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextFormField(
+                  controller: _nameCtrl,
+                  textInputAction: TextInputAction.next,
+                  decoration: const InputDecoration(
+                    labelText: 'Tên nhóm',
+                    prefixIcon: Icon(Icons.terrain_rounded),
+                    border: OutlineInputBorder(),
                   ),
-                  DropdownMenuItem(value: 'Hidden', child: Text('Ẩn (Hidden)')),
-                ],
-                onChanged: (v) {
-                  if (v != null) setState(() => _status = v);
-                },
-              ),
-            ],
+                  validator: (value) => value == null || value.trim().isEmpty
+                      ? 'Vui lòng nhập tên nhóm'
+                      : null,
+                ),
+                const SizedBox(height: 14),
+                TextFormField(
+                  controller: _descCtrl,
+                  maxLines: 3,
+                  decoration: const InputDecoration(
+                    labelText: 'Mô tả',
+                    prefixIcon: Icon(Icons.notes_rounded),
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 14),
+                TextFormField(
+                  controller: _imgCtrl,
+                  keyboardType: TextInputType.url,
+                  textInputAction: TextInputAction.next,
+                  decoration: const InputDecoration(
+                    labelText: 'Ảnh đại diện',
+                    hintText: 'URL hình ảnh nếu có',
+                    prefixIcon: Icon(Icons.image_outlined),
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 14),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextFormField(
+                        controller: _orderCtrl,
+                        keyboardType: TextInputType.number,
+                        decoration: const InputDecoration(
+                          labelText: 'Thứ tự',
+                          prefixIcon: Icon(Icons.sort_rounded),
+                          border: OutlineInputBorder(),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: DropdownButtonFormField<String>(
+                        initialValue: _status,
+                        decoration: const InputDecoration(
+                          labelText: 'Trạng thái',
+                          border: OutlineInputBorder(),
+                        ),
+                        items: const [
+                          DropdownMenuItem(
+                            value: 'Active',
+                            child: Text('Hoạt động'),
+                          ),
+                          DropdownMenuItem(
+                            value: 'Hidden',
+                            child: Text('Đã ẩn'),
+                          ),
+                        ],
+                        onChanged: (value) {
+                          if (value != null) setState(() => _status = value);
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
       ),
       actions: [
         TextButton(
-          onPressed: () => Navigator.pop(context, false),
+          onPressed: _isLoading ? null : () => Navigator.pop(context, false),
           child: const Text('Hủy'),
         ),
-        FilledButton(
+        FilledButton.icon(
           onPressed: _isLoading ? null : _submit,
-          child: _isLoading
+          icon: _isLoading
               ? const SizedBox(
-                  width: 16,
-                  height: 16,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    color: Colors.white,
-                  ),
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
                 )
-              : const Text('Lưu'),
+              : const Icon(Icons.save_rounded),
+          label: Text(_isLoading ? 'Đang lưu' : 'Lưu'),
         ),
       ],
     );

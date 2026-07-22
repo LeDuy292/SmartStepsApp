@@ -32,6 +32,7 @@ public class SituationStep
 
     // Navigation properties
     [ForeignKey(nameof(SituationId))]
+    [System.Text.Json.Serialization.JsonIgnore]
     public Situation Situation { get; set; } = null!;
 
     public ICollection<UserProgress> UserProgresses { get; set; } = new List<UserProgress>();

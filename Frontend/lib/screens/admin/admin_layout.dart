@@ -2,14 +2,15 @@ import 'package:flutter/material.dart';
 
 import '../../services/auth_service.dart';
 import '../../services/local_profile_storage.dart';
-import '../login_screen.dart';
 import '../../theme/duo_theme.dart';
-import 'dashboard/admin_dashboard_view.dart';
-import 'users/user_list_view.dart';
+import '../login_screen.dart';
+import 'admin_components.dart';
 import 'content/island_list_view.dart';
 import 'content/situation_list_view.dart';
 import 'content/skill_list_view.dart';
 import 'operations/admin_operations_view.dart';
+import 'dashboard/admin_dashboard_view.dart';
+import 'users/user_list_view.dart';
 
 class AdminLayout extends StatefulWidget {
   const AdminLayout({super.key});
@@ -89,33 +90,58 @@ class _AdminLayoutState extends State<AdminLayout> {
                     },
                   ),
                 ),
+                trailing: Expanded(
+                  child: Align(
+                    alignment: Alignment.bottomCenter,
+                    child: Padding(
+                      padding: const EdgeInsets.only(bottom: 20),
+                      child: IconButton.filledTonal(
+                        icon: const Icon(Icons.logout_rounded),
+                        color: AdminColors.red,
+                        tooltip: 'Đăng xuất',
+                        onPressed: _handleLogout,
+                        style: IconButton.styleFrom(
+                          minimumSize: const Size(44, 44),
+                          backgroundColor: AdminColors.red.withValues(
+                            alpha: 0.08,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                destinations: const [
+                  NavigationRailDestination(
+                    icon: Icon(Icons.dashboard_outlined),
+                    selectedIcon: Icon(Icons.dashboard_rounded),
+                    label: Text('Tổng quan'),
+                  ),
+                  NavigationRailDestination(
+                    icon: Icon(Icons.people_outline_rounded),
+                    selectedIcon: Icon(Icons.people_rounded),
+                    label: Text('Người dùng'),
+                  ),
+                  NavigationRailDestination(
+                    icon: Icon(Icons.map_outlined),
+                    selectedIcon: Icon(Icons.map_rounded),
+                    label: Text('Nhóm bài học'),
+                  ),
+                  NavigationRailDestination(
+                    icon: Icon(Icons.menu_book_outlined),
+                    selectedIcon: Icon(Icons.menu_book_rounded),
+                    label: Text('Bài học'),
+                  ),
+                  NavigationRailDestination(
+                    icon: Icon(Icons.psychology_alt_outlined),
+                    selectedIcon: Icon(Icons.psychology_alt_rounded),
+                    label: Text('Kỹ năng'),
+                  ),
+                ],
               ),
-            ),
-            destinations: const [
-              NavigationRailDestination(
-                icon: Icon(Icons.dashboard_outlined),
-                selectedIcon: Icon(Icons.dashboard),
-                label: Text('Tổng quan'),
-              ),
-              NavigationRailDestination(
-                icon: Icon(Icons.people_outline),
-                selectedIcon: Icon(Icons.people),
-                label: Text('Người dùng'),
-              ),
-              NavigationRailDestination(
-                icon: Icon(Icons.map_outlined),
-                selectedIcon: Icon(Icons.map),
-                label: Text('Nhóm bài học'),
-              ),
-              NavigationRailDestination(
-                icon: Icon(Icons.book_outlined),
-                selectedIcon: Icon(Icons.book),
-                label: Text('Bài học'),
-              ),
-              NavigationRailDestination(
-                icon: Icon(Icons.star_outline),
-                selectedIcon: Icon(Icons.star),
-                label: Text('Kỹ năng'),
+              const VerticalDivider(
+                thickness: 1,
+                width: 1,
+                color: AdminColors.line,
               ),
               NavigationRailDestination(
                 icon: Icon(Icons.support_agent_outlined),

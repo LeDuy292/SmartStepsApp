@@ -192,7 +192,15 @@ class ParentNotes {
 }
 
 SafetyLesson _lessonFromSituation(SituationDetail situation) {
-  final introStep = _stepByType(situation, 'Intro');
+  var introStep = _stepByType(situation, 'Intro');
+  if (introStep == null || introStep.mediaUrl == null || introStep.mediaUrl!.trim().isEmpty) {
+    for (final s in situation.steps) {
+      if (s.mediaUrl != null && s.mediaUrl!.trim().isNotEmpty) {
+        introStep = s;
+        break;
+      }
+    }
+  }
   final flashcardStep = _stepByType(situation, 'Flashcard');
   final wrongStep = _stepByType(situation, 'Story');
   final correctStep = _stepByType(situation, 'Result');

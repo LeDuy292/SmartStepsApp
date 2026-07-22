@@ -47,7 +47,8 @@ public sealed class DatabaseMigrationService(
                     logger.LogInformation("Unlocked {Count} users.", lockedUsers.Count);
                 }
 
-                if (!await dbContext.Users.AnyAsync(u => u.Role == "Admin", stoppingToken))
+                var adminUser = await dbContext.Users.FirstOrDefaultAsync(u => u.Email == "admin@smartsteps.vn", stoppingToken);
+                if (adminUser == null)
                 {
                     dbContext.Users.Add(new User
                     {
@@ -59,6 +60,22 @@ public sealed class DatabaseMigrationService(
                         CreatedAt = DateTime.UtcNow
                     });
                     await dbContext.SaveChangesAsync(stoppingToken);
+                }
+                else
+                {
+                    adminUser.Password = BCrypt.Net.BCrypt.HashPassword("Admin@123");
+                    adminUser.Status = "Active";
+                    adminUser.Role = "Admin";
+                    await dbContext.SaveChangesAsync(stoppingToken);
+                }
+
+                // Temporary fix: reset the specific user's role to Parent to prevent them from getting stuck in Admin dashboard
+                var googleUser = await dbContext.Users.FirstOrDefaultAsync(u => u.Email == "crtquan2004@gmail.com", stoppingToken);
+                if (googleUser != null && googleUser.Role == "Admin")
+                {
+                    googleUser.Role = "Parent";
+                    await dbContext.SaveChangesAsync(stoppingToken);
+                    logger.LogInformation("Reset crtquan2004@gmail.com role to Parent.");
                 }
 
                 if (!await dbContext.Islands.AnyAsync(stoppingToken))

@@ -414,6 +414,8 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 }
 
+
+
 void _showForgotPasswordDialog(BuildContext context, AuthGateway authGateway) {
   final TextEditingController forgotEmailController = TextEditingController();
   bool isSending = false;
