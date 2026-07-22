@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
+
 import '../../../services/admin_api_service.dart';
 import '../../../theme/duo_theme.dart';
+import '../admin_components.dart';
 
 class SituationEditorScreen extends StatefulWidget {
-  final int situationId;
-
   const SituationEditorScreen({super.key, required this.situationId});
+
+  final int situationId;
 
   @override
   State<SituationEditorScreen> createState() => _SituationEditorScreenState();
@@ -33,9 +35,9 @@ class _SituationEditorScreenState extends State<SituationEditorScreen> {
     } catch (e) {
       setState(() => _isLoading = false);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Lỗi: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Lỗi: $e')));
       }
     }
   }
@@ -61,10 +63,29 @@ class _SituationEditorScreenState extends State<SituationEditorScreen> {
         return StatefulBuilder(
           builder: (context, setDialogState) {
             return AlertDialog(
-              title: Text(isEditing ? 'Sửa Bước (Step)' : 'Thêm Bước Mới'),
+              insetPadding: const EdgeInsets.symmetric(
+                horizontal: 18,
+                vertical: 24,
+              ),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(24),
+              ),
+              title: Row(
+                children: [
+                  const Icon(
+                    Icons.format_list_numbered_rounded,
+                    color: AdminColors.teal,
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(child: Text(isEditing ? 'Sửa step' : 'Thêm step')),
+                ],
+              ),
               content: SingleChildScrollView(
                 child: SizedBox(
-                  width: (MediaQuery.of(context).size.width * 0.9).clamp(280.0, 500.0),
+                  width: (MediaQuery.of(context).size.width * 0.9).clamp(
+                    280.0,
+                    520.0,
+                  ),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -72,62 +93,83 @@ class _SituationEditorScreenState extends State<SituationEditorScreen> {
                       DropdownButtonFormField<String>(
                         initialValue: stepType,
                         decoration: const InputDecoration(
-                          labelText: 'Loại bước (Step Type)',
+                          labelText: 'Loại step',
+                          prefixIcon: Icon(Icons.category_outlined),
                           border: OutlineInputBorder(),
                         ),
                         items: const [
-                          DropdownMenuItem(value: 'Intro', child: Text('Intro')),
-                          DropdownMenuItem(value: 'Story', child: Text('Story')),
-                          DropdownMenuItem(value: 'Flashcard', child: Text('Flashcard')),
-                          DropdownMenuItem(value: 'Result', child: Text('Result')),
+                          DropdownMenuItem(
+                            value: 'Intro',
+                            child: Text('Intro'),
+                          ),
+                          DropdownMenuItem(
+                            value: 'Story',
+                            child: Text('Story'),
+                          ),
+                          DropdownMenuItem(
+                            value: 'Flashcard',
+                            child: Text('Flashcard'),
+                          ),
+                          DropdownMenuItem(
+                            value: 'Result',
+                            child: Text('Result'),
+                          ),
                         ],
-                        onChanged: (val) {
-                          if (val != null) setDialogState(() => stepType = val);
+                        onChanged: (value) {
+                          if (value != null) {
+                            setDialogState(() => stepType = value);
+                          }
                         },
                       ),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 14),
                       TextField(
                         controller: orderController,
                         keyboardType: TextInputType.number,
                         decoration: const InputDecoration(
-                          labelText: 'Thứ tự (Order Index)',
+                          labelText: 'Thứ tự',
+                          prefixIcon: Icon(Icons.sort_rounded),
                           border: OutlineInputBorder(),
                         ),
                       ),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 14),
                       TextField(
                         controller: contentController,
-                        maxLines: 3,
+                        maxLines: 4,
                         decoration: const InputDecoration(
-                          labelText: 'Nội dung (Content)',
+                          labelText: 'Nội dung',
+                          prefixIcon: Icon(Icons.notes_rounded),
                           border: OutlineInputBorder(),
                         ),
                       ),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 14),
                       TextField(
                         controller: mediaUrlController,
+                        keyboardType: TextInputType.url,
                         decoration: InputDecoration(
-                          labelText: 'Link Video / Public ID (MediaUrl)',
+                          labelText: 'Video URL hoặc Cloudinary ID',
+                          helperText:
+                              'Có thể nhập link https://... hoặc public ID.',
+                          prefixIcon: const Icon(Icons.ondemand_video_outlined),
                           border: const OutlineInputBorder(),
-                          helperText: 'Nhập link direct (https://...) hoặc Cloudinary ID (vd: Safety_smallitems_intro_cw1tlh.mp4)',
                           suffixIcon: IconButton(
-                            icon: const Icon(Icons.preview),
-                            tooltip: 'Xem thử video URL',
+                            icon: const Icon(Icons.visibility_rounded),
+                            tooltip: 'Xem URL video',
                             onPressed: () {
                               final text = mediaUrlController.text.trim();
                               if (text.isEmpty) return;
                               final url = text.startsWith('http')
                                   ? text
                                   : 'https://res.cloudinary.com/dtm5a4bwr/video/upload/$text';
-                              
+
                               showDialog<void>(
-                                context: context,
+                                context: dialogContext,
                                 builder: (_) => AlertDialog(
-                                  title: const Text('Xem thử URL Video'),
+                                  title: const Text('URL video'),
                                   content: SelectableText(url),
                                   actions: [
                                     TextButton(
-                                      onPressed: () => Navigator.of(context).pop(),
+                                      onPressed: () =>
+                                          Navigator.of(dialogContext).pop(),
                                       child: const Text('Đóng'),
                                     ),
                                   ],
@@ -143,10 +185,12 @@ class _SituationEditorScreenState extends State<SituationEditorScreen> {
               ),
               actions: [
                 TextButton(
-                  onPressed: isSaving ? null : () => Navigator.of(dialogContext).pop(),
+                  onPressed: isSaving
+                      ? null
+                      : () => Navigator.of(dialogContext).pop(),
                   child: const Text('Hủy'),
                 ),
-                FilledButton(
+                FilledButton.icon(
                   onPressed: isSaving
                       ? null
                       : () async {
@@ -154,7 +198,9 @@ class _SituationEditorScreenState extends State<SituationEditorScreen> {
                           try {
                             final payload = {
                               'stepType': stepType,
-                              'orderIndex': int.tryParse(orderController.text.trim()) ?? 1,
+                              'orderIndex':
+                                  int.tryParse(orderController.text.trim()) ??
+                                  1,
                               'content': contentController.text.trim(),
                               'mediaUrl': mediaUrlController.text.trim().isEmpty
                                   ? null
@@ -164,7 +210,10 @@ class _SituationEditorScreenState extends State<SituationEditorScreen> {
                             if (isEditing) {
                               await _api.updateStep(step['stepId'], payload);
                             } else {
-                              await _api.createStep(widget.situationId, payload);
+                              await _api.createStep(
+                                widget.situationId,
+                                payload,
+                              );
                             }
 
                             if (dialogContext.mounted) {
@@ -180,13 +229,16 @@ class _SituationEditorScreenState extends State<SituationEditorScreen> {
                             }
                           }
                         },
-                  child: isSaving
+                  icon: isSaving
                       ? const SizedBox(
-                          width: 16,
-                          height: 16,
+                          width: 18,
+                          height: 18,
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
-                      : Text(isEditing ? 'Lưu' : 'Thêm'),
+                      : const Icon(Icons.save_rounded),
+                  label: Text(
+                    isSaving ? 'Đang lưu' : (isEditing ? 'Lưu' : 'Thêm'),
+                  ),
                 ),
               ],
             );
@@ -194,21 +246,25 @@ class _SituationEditorScreenState extends State<SituationEditorScreen> {
         );
       },
     );
+
+    orderController.dispose();
+    contentController.dispose();
+    mediaUrlController.dispose();
   }
 
   Future<void> _deleteStep(int stepId) async {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text('Xác nhận xóa'),
-        content: const Text('Bạn có chắc chắn muốn xóa bước này không?'),
+        title: const Text('Xóa step'),
+        content: const Text('Bạn có chắc muốn xóa step này không?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
             child: const Text('Hủy'),
           ),
           FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: Colors.red),
+            style: FilledButton.styleFrom(backgroundColor: AdminColors.red),
             onPressed: () => Navigator.of(context).pop(true),
             child: const Text('Xóa'),
           ),
@@ -223,9 +279,9 @@ class _SituationEditorScreenState extends State<SituationEditorScreen> {
       await _fetchSituation();
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Lỗi xóa step: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Lỗi xóa step: $e')));
       }
     }
   }
@@ -257,10 +313,28 @@ class _SituationEditorScreenState extends State<SituationEditorScreen> {
         return StatefulBuilder(
           builder: (context, setDialogState) {
             return AlertDialog(
-              title: Text(isEditing ? 'Sửa Flashcard' : 'Thêm Flashcard Mới'),
+              insetPadding: const EdgeInsets.symmetric(
+                horizontal: 18,
+                vertical: 24,
+              ),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(24),
+              ),
+              title: Row(
+                children: [
+                  const Icon(Icons.quiz_rounded, color: AdminColors.violet),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(isEditing ? 'Sửa flashcard' : 'Thêm flashcard'),
+                  ),
+                ],
+              ),
               content: SingleChildScrollView(
                 child: SizedBox(
-                  width: (MediaQuery.of(context).size.width * 0.9).clamp(280.0, 500.0),
+                  width: (MediaQuery.of(context).size.width * 0.9).clamp(
+                    280.0,
+                    520.0,
+                  ),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
@@ -268,54 +342,62 @@ class _SituationEditorScreenState extends State<SituationEditorScreen> {
                         controller: questionController,
                         maxLines: 2,
                         decoration: const InputDecoration(
-                          labelText: 'Câu hỏi (Question)',
+                          labelText: 'Câu hỏi',
+                          prefixIcon: Icon(Icons.help_outline_rounded),
                           border: OutlineInputBorder(),
                         ),
                       ),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 14),
                       TextField(
                         controller: optionAController,
                         decoration: const InputDecoration(
-                          labelText: 'Đáp án A (Option A)',
+                          labelText: 'Đáp án A',
+                          prefixIcon: Icon(Icons.looks_one_outlined),
                           border: OutlineInputBorder(),
                         ),
                       ),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 14),
                       TextField(
                         controller: optionBController,
                         decoration: const InputDecoration(
-                          labelText: 'Đáp án B (Option B)',
+                          labelText: 'Đáp án B',
+                          prefixIcon: Icon(Icons.looks_two_outlined),
                           border: OutlineInputBorder(),
                         ),
                       ),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 14),
                       DropdownButtonFormField<String>(
                         initialValue: correctAnswer,
                         decoration: const InputDecoration(
-                          labelText: 'Đáp án đúng (Correct Answer)',
+                          labelText: 'Đáp án đúng',
+                          prefixIcon: Icon(Icons.check_circle_outline_rounded),
                           border: OutlineInputBorder(),
                         ),
                         items: const [
                           DropdownMenuItem(value: 'A', child: Text('Đáp án A')),
                           DropdownMenuItem(value: 'B', child: Text('Đáp án B')),
                         ],
-                        onChanged: (val) {
-                          if (val != null) setDialogState(() => correctAnswer = val);
+                        onChanged: (value) {
+                          if (value != null) {
+                            setDialogState(() => correctAnswer = value);
+                          }
                         },
                       ),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 14),
                       TextField(
                         controller: correctFeedbackController,
                         decoration: const InputDecoration(
-                          labelText: 'Phản hồi khi chọn ĐÚNG',
+                          labelText: 'Phản hồi khi đúng',
+                          prefixIcon: Icon(Icons.thumb_up_alt_outlined),
                           border: OutlineInputBorder(),
                         ),
                       ),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 14),
                       TextField(
                         controller: wrongFeedbackController,
                         decoration: const InputDecoration(
-                          labelText: 'Phản hồi khi chọn SAI',
+                          labelText: 'Phản hồi khi sai',
+                          prefixIcon: Icon(Icons.tips_and_updates_outlined),
                           border: OutlineInputBorder(),
                         ),
                       ),
@@ -325,11 +407,12 @@ class _SituationEditorScreenState extends State<SituationEditorScreen> {
               ),
               actions: [
                 TextButton(
-                  onPressed: isSaving ? null : () => Navigator.of(dialogContext).pop(),
+                  onPressed: isSaving
+                      ? null
+                      : () => Navigator.of(dialogContext).pop(),
                   child: const Text('Hủy'),
                 ),
-                FilledButton(
-                  style: FilledButton.styleFrom(backgroundColor: DuoColors.primaryYellow, foregroundColor: Colors.black),
+                FilledButton.icon(
                   onPressed: isSaving
                       ? null
                       : () async {
@@ -340,14 +423,22 @@ class _SituationEditorScreenState extends State<SituationEditorScreen> {
                               'optionA': optionAController.text.trim(),
                               'optionB': optionBController.text.trim(),
                               'correctAnswer': correctAnswer,
-                              'correctFeedback': correctFeedbackController.text.trim(),
-                              'wrongFeedback': wrongFeedbackController.text.trim(),
+                              'correctFeedback': correctFeedbackController.text
+                                  .trim(),
+                              'wrongFeedback': wrongFeedbackController.text
+                                  .trim(),
                             };
 
                             if (isEditing) {
-                              await _api.updateFlashcard(fc['flashcardId'], payload);
+                              await _api.updateFlashcard(
+                                fc['flashcardId'],
+                                payload,
+                              );
                             } else {
-                              await _api.createFlashcard(widget.situationId, payload);
+                              await _api.createFlashcard(
+                                widget.situationId,
+                                payload,
+                              );
                             }
 
                             if (dialogContext.mounted) {
@@ -363,13 +454,16 @@ class _SituationEditorScreenState extends State<SituationEditorScreen> {
                             }
                           }
                         },
-                  child: isSaving
+                  icon: isSaving
                       ? const SizedBox(
-                          width: 16,
-                          height: 16,
+                          width: 18,
+                          height: 18,
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
-                      : Text(isEditing ? 'Lưu' : 'Thêm'),
+                      : const Icon(Icons.save_rounded),
+                  label: Text(
+                    isSaving ? 'Đang lưu' : (isEditing ? 'Lưu' : 'Thêm'),
+                  ),
                 ),
               ],
             );
@@ -377,21 +471,27 @@ class _SituationEditorScreenState extends State<SituationEditorScreen> {
         );
       },
     );
+
+    wrongFeedbackController.dispose();
+    correctFeedbackController.dispose();
+    optionBController.dispose();
+    optionAController.dispose();
+    questionController.dispose();
   }
 
   Future<void> _deleteFlashcard(int fcId) async {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text('Xác nhận xóa'),
-        content: const Text('Bạn có chắc chắn muốn xóa Flashcard này không?'),
+        title: const Text('Xóa flashcard'),
+        content: const Text('Bạn có chắc muốn xóa flashcard này không?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
             child: const Text('Hủy'),
           ),
           FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: Colors.red),
+            style: FilledButton.styleFrom(backgroundColor: AdminColors.red),
             onPressed: () => Navigator.of(context).pop(true),
             child: const Text('Xóa'),
           ),
@@ -406,9 +506,9 @@ class _SituationEditorScreenState extends State<SituationEditorScreen> {
       await _fetchSituation();
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Lỗi xóa flashcard: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Lỗi xóa flashcard: $e')));
       }
     }
   }
@@ -416,17 +516,26 @@ class _SituationEditorScreenState extends State<SituationEditorScreen> {
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+      return const Scaffold(
+        backgroundColor: DuoColors.background,
+        body: AdminLoadingState(label: 'Đang tải trình soạn thảo...'),
+      );
     }
+
     if (_situation == null) {
-      return Scaffold(
-        appBar: AppBar(title: const Text('Lỗi')),
-        body: const Center(child: Text('Không tìm thấy bài học')),
+      return const Scaffold(
+        backgroundColor: DuoColors.background,
+        body: AdminEmptyState(
+          icon: Icons.error_outline_rounded,
+          title: 'Không tìm thấy bài học',
+          message: 'Bài học có thể đã bị xóa hoặc bạn không có quyền truy cập.',
+        ),
       );
     }
 
     final steps = _situation!['steps'] as List<dynamic>? ?? [];
     final flashcards = _situation!['flashcards'] as List<dynamic>? ?? [];
+    final title = _situation!['title']?.toString() ?? 'Bài học';
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -436,18 +545,25 @@ class _SituationEditorScreenState extends State<SituationEditorScreen> {
           return DefaultTabController(
             length: 2,
             child: Scaffold(
+              backgroundColor: DuoColors.background,
               appBar: AppBar(
-                title: Text('Soạn thảo: ${_situation!['title']}'),
+                title: Text(
+                  title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
                 backgroundColor: DuoColors.background,
                 scrolledUnderElevation: 0,
                 bottom: const TabBar(
                   tabs: [
-                    Tab(icon: Icon(Icons.list_alt), text: 'Các Bước (Steps)'),
-                    Tab(icon: Icon(Icons.quiz), text: 'Câu hỏi (Flashcards)'),
+                    Tab(
+                      icon: Icon(Icons.format_list_numbered_rounded),
+                      text: 'Steps',
+                    ),
+                    Tab(icon: Icon(Icons.quiz_rounded), text: 'Flashcards'),
                   ],
                 ),
               ),
-              backgroundColor: DuoColors.background,
               body: TabBarView(
                 children: [
                   _buildStepsSection(steps),
@@ -459,12 +575,12 @@ class _SituationEditorScreenState extends State<SituationEditorScreen> {
         }
 
         return Scaffold(
+          backgroundColor: DuoColors.background,
           appBar: AppBar(
-            title: Text('Soạn thảo bài học: ${_situation!['title']}'),
+            title: Text('Soạn bài học: $title'),
             backgroundColor: DuoColors.background,
             scrolledUnderElevation: 0,
           ),
-          backgroundColor: DuoColors.background,
           body: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -478,77 +594,45 @@ class _SituationEditorScreenState extends State<SituationEditorScreen> {
   }
 
   Widget _buildStepsSection(List<dynamic> steps) {
-    return Card(
-      margin: const EdgeInsets.all(16),
-      child: Padding(
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: AdminPanel(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Expanded(
-                  child: Text('Các Bước (Steps)', style: Theme.of(context).textTheme.titleLarge),
-                ),
-                FilledButton.icon(
-                  onPressed: () => _showStepDialog(),
-                  icon: const Icon(Icons.add),
-                  label: const Text('Thêm Step'),
-                ),
-              ],
+            AdminSectionTitle(
+              icon: Icons.format_list_numbered_rounded,
+              title: 'Các bước học',
+              trailing: AdminActionIcon(
+                icon: Icons.add_rounded,
+                tooltip: 'Thêm step',
+                onPressed: () => _showStepDialog(),
+                color: AdminColors.green,
+              ),
             ),
-            const Divider(),
+            const SizedBox(height: 14),
             Expanded(
               child: steps.isEmpty
-                  ? const Center(child: Text('Chưa có bước nào trong bài học'))
-                  : ListView.builder(
+                  ? const AdminEmptyState(
+                      icon: Icons.playlist_add_rounded,
+                      title: 'Chưa có step',
+                      message:
+                          'Thêm step đầu tiên để bắt đầu dựng nội dung bài học.',
+                    )
+                  : ListView.separated(
                       itemCount: steps.length,
+                      separatorBuilder: (_, _) => const SizedBox(height: 10),
                       itemBuilder: (context, index) {
                         final step = steps[index];
-                        final hasVideo = step['mediaUrl'] != null && step['mediaUrl'].toString().isNotEmpty;
-                        return Card(
-                          margin: const EdgeInsets.symmetric(vertical: 4),
-                          child: ListTile(
-                            leading: CircleAvatar(child: Text(step['orderIndex'].toString())),
-                            title: Row(
-                              children: [
-                                Text(
-                                  step['stepType'] ?? 'Step',
-                                  style: const TextStyle(fontWeight: FontWeight.bold),
-                                ),
-                                if (hasVideo) ...[
-                                  const SizedBox(width: 8),
-                                  const Icon(Icons.ondemand_video, size: 18, color: Colors.blue),
-                                ],
-                              ],
-                            ),
-                            subtitle: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                if (step['content'] != null && step['content'].toString().isNotEmpty)
-                                  Text(step['content'], maxLines: 2, overflow: TextOverflow.ellipsis),
-                                if (hasVideo)
-                                  Text(
-                                    'Media: ${step['mediaUrl']}',
-                                    style: const TextStyle(fontSize: 12, color: Colors.blueGrey),
-                                  ),
-                              ],
-                            ),
-                            trailing: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                IconButton(
-                                  icon: const Icon(Icons.edit, color: Colors.blue),
-                                  onPressed: () => _showStepDialog(step),
-                                ),
-                                IconButton(
-                                  icon: const Icon(Icons.delete, color: Colors.red),
-                                  onPressed: () => _deleteStep(step['stepId']),
-                                ),
-                              ],
-                            ),
-                          ),
+                        final hasVideo =
+                            step['mediaUrl'] != null &&
+                            step['mediaUrl'].toString().isNotEmpty;
+                        return _StepCard(
+                          step: step,
+                          hasVideo: hasVideo,
+                          onEdit: () => _showStepDialog(step),
+                          onDelete: () => _deleteStep(step['stepId']),
                         );
                       },
                     ),
@@ -560,68 +644,41 @@ class _SituationEditorScreenState extends State<SituationEditorScreen> {
   }
 
   Widget _buildFlashcardsSection(List<dynamic> flashcards) {
-    return Card(
-      margin: const EdgeInsets.all(16),
-      child: Padding(
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: AdminPanel(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Expanded(
-                  child: Text('Câu hỏi (Flashcards)', style: Theme.of(context).textTheme.titleLarge),
-                ),
-                FilledButton.icon(
-                  onPressed: () => _showFlashcardDialog(),
-                  icon: const Icon(Icons.add),
-                  label: const Text('Thêm Câu Hỏi'),
-                  style: FilledButton.styleFrom(backgroundColor: DuoColors.primaryYellow, foregroundColor: Colors.black),
-                ),
-              ],
+            AdminSectionTitle(
+              icon: Icons.quiz_rounded,
+              title: 'Flashcards',
+              trailing: AdminActionIcon(
+                icon: Icons.add_rounded,
+                tooltip: 'Thêm flashcard',
+                onPressed: () => _showFlashcardDialog(),
+                color: AdminColors.green,
+              ),
             ),
-            const Divider(),
+            const SizedBox(height: 14),
             Expanded(
               child: flashcards.isEmpty
-                  ? const Center(child: Text('Chưa có câu hỏi nào'))
-                  : ListView.builder(
+                  ? const AdminEmptyState(
+                      icon: Icons.quiz_outlined,
+                      title: 'Chưa có flashcard',
+                      message:
+                          'Thêm câu hỏi để kiểm tra hiểu bài sau mỗi tình huống.',
+                    )
+                  : ListView.separated(
                       itemCount: flashcards.length,
+                      separatorBuilder: (_, _) => const SizedBox(height: 10),
                       itemBuilder: (context, index) {
                         final fc = flashcards[index];
-                        return Card(
-                          color: Colors.grey[50],
-                          margin: const EdgeInsets.symmetric(vertical: 4),
-                          child: Padding(
-                            padding: const EdgeInsets.all(16.0),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text('Q: ${fc['question']}', style: const TextStyle(fontWeight: FontWeight.bold)),
-                                const SizedBox(height: 8),
-                                Text('A: ${fc['optionA']} ${fc['correctAnswer'] == 'A' ? '(Đúng)' : ''}',
-                                    style: TextStyle(color: fc['correctAnswer'] == 'A' ? Colors.green : Colors.black)),
-                                Text('B: ${fc['optionB']} ${fc['correctAnswer'] == 'B' ? '(Đúng)' : ''}',
-                                    style: TextStyle(color: fc['correctAnswer'] == 'B' ? Colors.green : Colors.black)),
-                                const SizedBox(height: 8),
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.end,
-                                  children: [
-                                    TextButton.icon(
-                                      icon: const Icon(Icons.edit, color: Colors.blue),
-                                      label: const Text('Sửa'),
-                                      onPressed: () => _showFlashcardDialog(fc),
-                                    ),
-                                    TextButton.icon(
-                                      icon: const Icon(Icons.delete, color: Colors.red),
-                                      label: const Text('Xóa', style: TextStyle(color: Colors.red)),
-                                      onPressed: () => _deleteFlashcard(fc['flashcardId']),
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
-                          ),
+                        return _FlashcardCard(
+                          flashcard: fc,
+                          onEdit: () => _showFlashcardDialog(fc),
+                          onDelete: () => _deleteFlashcard(fc['flashcardId']),
                         );
                       },
                     ),
@@ -629,6 +686,236 @@ class _SituationEditorScreenState extends State<SituationEditorScreen> {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _StepCard extends StatelessWidget {
+  const _StepCard({
+    required this.step,
+    required this.hasVideo,
+    required this.onEdit,
+    required this.onDelete,
+  });
+
+  final Map<String, dynamic> step;
+  final bool hasVideo;
+  final VoidCallback onEdit;
+  final VoidCallback onDelete;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AdminColors.teal.withValues(alpha: 0.06),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AdminColors.teal.withValues(alpha: 0.16)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              CircleAvatar(
+                radius: 20,
+                backgroundColor: AdminColors.teal.withValues(alpha: 0.14),
+                child: Text(
+                  '${step['orderIndex'] ?? '-'}',
+                  style: const TextStyle(
+                    color: AdminColors.teal,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  step['stepType'] ?? 'Step',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: AdminColors.ink,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ),
+              if (hasVideo)
+                const Icon(
+                  Icons.ondemand_video_rounded,
+                  color: AdminColors.blue,
+                ),
+            ],
+          ),
+          if (step['content'] != null &&
+              step['content'].toString().isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Text(
+              step['content'],
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                color: AdminColors.ink,
+                height: 1.35,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+          if (hasVideo) ...[
+            const SizedBox(height: 8),
+            Text(
+              'Media: ${step['mediaUrl']}',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                color: AdminColors.muted,
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              AdminActionIcon(
+                icon: Icons.edit_rounded,
+                tooltip: 'Sửa step',
+                onPressed: onEdit,
+                color: AdminColors.blue,
+              ),
+              const Spacer(),
+              AdminActionIcon(
+                icon: Icons.delete_rounded,
+                tooltip: 'Xóa step',
+                onPressed: onDelete,
+                color: AdminColors.red,
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _FlashcardCard extends StatelessWidget {
+  const _FlashcardCard({
+    required this.flashcard,
+    required this.onEdit,
+    required this.onDelete,
+  });
+
+  final Map<String, dynamic> flashcard;
+  final VoidCallback onEdit;
+  final VoidCallback onDelete;
+
+  @override
+  Widget build(BuildContext context) {
+    final correct = flashcard['correctAnswer']?.toString() ?? 'A';
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AdminColors.violet.withValues(alpha: 0.06),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AdminColors.violet.withValues(alpha: 0.16)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            flashcard['question'] ?? 'Chưa nhập câu hỏi',
+            maxLines: 3,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              color: AdminColors.ink,
+              fontSize: 16,
+              fontWeight: FontWeight.w900,
+              height: 1.25,
+            ),
+          ),
+          const SizedBox(height: 10),
+          _AnswerLine(
+            label: 'A',
+            text: flashcard['optionA'],
+            isCorrect: correct == 'A',
+          ),
+          const SizedBox(height: 6),
+          _AnswerLine(
+            label: 'B',
+            text: flashcard['optionB'],
+            isCorrect: correct == 'B',
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              AdminActionIcon(
+                icon: Icons.edit_rounded,
+                tooltip: 'Sửa flashcard',
+                onPressed: onEdit,
+                color: AdminColors.blue,
+              ),
+              const Spacer(),
+              AdminActionIcon(
+                icon: Icons.delete_rounded,
+                tooltip: 'Xóa flashcard',
+                onPressed: onDelete,
+                color: AdminColors.red,
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _AnswerLine extends StatelessWidget {
+  const _AnswerLine({
+    required this.label,
+    required this.text,
+    required this.isCorrect,
+  });
+
+  final String label;
+  final dynamic text;
+  final bool isCorrect;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = isCorrect ? AdminColors.green : AdminColors.muted;
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: 28,
+          height: 28,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Text(
+            label,
+            style: TextStyle(color: color, fontWeight: FontWeight.w900),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            '${text ?? ''}${isCorrect ? '  (đúng)' : ''}',
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              color: color,
+              fontWeight: isCorrect ? FontWeight.w900 : FontWeight.w700,
+              height: 1.35,
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

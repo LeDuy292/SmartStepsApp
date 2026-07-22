@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
+
 import '../../../services/admin_api_service.dart';
+import '../admin_components.dart';
 
 class UserFormDialog extends StatefulWidget {
-  final Map<String, dynamic>? user; // null if adding
   const UserFormDialog({super.key, this.user});
+
+  final Map<String, dynamic>? user;
 
   @override
   State<UserFormDialog> createState() => _UserFormDialogState();
@@ -13,11 +16,10 @@ class _UserFormDialogState extends State<UserFormDialog> {
   final AdminApiService _api = AdminApiService();
   final _formKey = GlobalKey<FormState>();
 
-  late TextEditingController _nameCtrl;
-  late TextEditingController _emailCtrl;
-  late TextEditingController _pwdCtrl;
+  late final TextEditingController _nameCtrl;
+  late final TextEditingController _emailCtrl;
+  late final TextEditingController _pwdCtrl;
   String _role = 'Child';
-
   bool _isSaving = false;
 
   @override
@@ -26,9 +28,15 @@ class _UserFormDialogState extends State<UserFormDialog> {
     _nameCtrl = TextEditingController(text: widget.user?['fullName'] ?? '');
     _emailCtrl = TextEditingController(text: widget.user?['email'] ?? '');
     _pwdCtrl = TextEditingController();
-    if (widget.user != null) {
-      _role = widget.user!['role'] ?? 'Child';
-    }
+    _role = widget.user?['role'] ?? 'Child';
+  }
+
+  @override
+  void dispose() {
+    _pwdCtrl.dispose();
+    _emailCtrl.dispose();
+    _nameCtrl.dispose();
+    super.dispose();
   }
 
   Future<void> _save() async {
@@ -48,9 +56,7 @@ class _UserFormDialogState extends State<UserFormDialog> {
       } else {
         await _api.updateUser(widget.user!['userId'], data);
       }
-      if (mounted) {
-        Navigator.pop(context, true);
-      }
+      if (mounted) Navigator.pop(context, true);
     } catch (e) {
       setState(() => _isSaving = false);
       if (mounted) {
@@ -63,9 +69,24 @@ class _UserFormDialogState extends State<UserFormDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final isEditing = widget.user != null;
+
     return AlertDialog(
-      title: Text(
-        widget.user == null ? 'Thêm người dùng' : 'Chỉnh sửa người dùng',
+      insetPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 24),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+      title: Row(
+        children: [
+          Icon(
+            isEditing
+                ? Icons.manage_accounts_rounded
+                : Icons.person_add_alt_1_rounded,
+            color: AdminColors.blue,
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(isEditing ? 'Chỉnh sửa người dùng' : 'Thêm người dùng'),
+          ),
+        ],
       ),
       content: SingleChildScrollView(
         child: SizedBox(
@@ -73,64 +94,89 @@ class _UserFormDialogState extends State<UserFormDialog> {
           child: Form(
             key: _formKey,
             child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextFormField(
-                controller: _nameCtrl,
-                decoration: const InputDecoration(labelText: 'Họ và tên'),
-                validator: (v) => v!.isEmpty ? 'Không được để trống' : null,
-              ),
-              const SizedBox(height: 12),
-              TextFormField(
-                controller: _emailCtrl,
-                decoration: const InputDecoration(labelText: 'Email'),
-                validator: (v) =>
-                    !v!.contains('@') ? 'Email không hợp lệ' : null,
-              ),
-              if (widget.user == null) ...[
-                const SizedBox(height: 12),
+              mainAxisSize: MainAxisSize.min,
+              children: [
                 TextFormField(
-                  controller: _pwdCtrl,
-                  decoration: const InputDecoration(labelText: 'Mật khẩu'),
-                  obscureText: true,
-                  validator: (v) => v!.length < 6 ? 'Ít nhất 6 ký tự' : null,
+                  controller: _nameCtrl,
+                  textInputAction: TextInputAction.next,
+                  decoration: const InputDecoration(
+                    labelText: 'Họ và tên',
+                    prefixIcon: Icon(Icons.person_outline_rounded),
+                    border: OutlineInputBorder(),
+                  ),
+                  validator: (value) => value == null || value.trim().isEmpty
+                      ? 'Vui lòng nhập họ và tên'
+                      : null,
+                ),
+                const SizedBox(height: 14),
+                TextFormField(
+                  controller: _emailCtrl,
+                  keyboardType: TextInputType.emailAddress,
+                  textInputAction: isEditing
+                      ? TextInputAction.done
+                      : TextInputAction.next,
+                  decoration: const InputDecoration(
+                    labelText: 'Email',
+                    prefixIcon: Icon(Icons.alternate_email_rounded),
+                    border: OutlineInputBorder(),
+                  ),
+                  validator: (value) => value == null || !value.contains('@')
+                      ? 'Email không hợp lệ'
+                      : null,
+                ),
+                if (!isEditing) ...[
+                  const SizedBox(height: 14),
+                  TextFormField(
+                    controller: _pwdCtrl,
+                    obscureText: true,
+                    textInputAction: TextInputAction.done,
+                    decoration: const InputDecoration(
+                      labelText: 'Mật khẩu',
+                      prefixIcon: Icon(Icons.lock_outline_rounded),
+                      border: OutlineInputBorder(),
+                    ),
+                    validator: (value) => value == null || value.length < 6
+                        ? 'Mật khẩu cần ít nhất 6 ký tự'
+                        : null,
+                  ),
+                ],
+                const SizedBox(height: 14),
+                DropdownButtonFormField<String>(
+                  initialValue: _role,
+                  decoration: const InputDecoration(
+                    labelText: 'Vai trò',
+                    prefixIcon: Icon(Icons.badge_outlined),
+                    border: OutlineInputBorder(),
+                  ),
+                  items: const [
+                    DropdownMenuItem(value: 'Child', child: Text('Trẻ em')),
+                    DropdownMenuItem(value: 'Parent', child: Text('Phụ huynh')),
+                    DropdownMenuItem(value: 'Admin', child: Text('Admin')),
+                  ],
+                  onChanged: (value) {
+                    if (value != null) setState(() => _role = value);
+                  },
                 ),
               ],
-              const SizedBox(height: 12),
-              DropdownButtonFormField<String>(
-                initialValue: _role,
-                decoration: const InputDecoration(labelText: 'Vai trò'),
-                items: const [
-                  DropdownMenuItem(value: 'Child', child: Text('Trẻ em')),
-                  DropdownMenuItem(value: 'Parent', child: Text('Phụ huynh')),
-                  DropdownMenuItem(value: 'Admin', child: Text('Admin')),
-                ],
-                onChanged: (v) {
-                  if (v != null) setState(() => _role = v);
-                },
-              ),
-            ],
+            ),
           ),
         ),
       ),
-      ),
       actions: [
         TextButton(
-          onPressed: () => Navigator.pop(context),
+          onPressed: _isSaving ? null : () => Navigator.pop(context, false),
           child: const Text('Hủy'),
         ),
-        FilledButton(
+        FilledButton.icon(
           onPressed: _isSaving ? null : _save,
-          child: _isSaving
+          icon: _isSaving
               ? const SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    color: Colors.white,
-                  ),
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
                 )
-              : const Text('Lưu'),
+              : const Icon(Icons.save_rounded),
+          label: Text(_isSaving ? 'Đang lưu' : 'Lưu'),
         ),
       ],
     );
