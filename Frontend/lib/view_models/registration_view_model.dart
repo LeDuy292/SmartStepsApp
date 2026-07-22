@@ -30,9 +30,12 @@ class RegistrationViewModel extends ChangeNotifier {
   RegistrationSubmitStatus _submitStatus = RegistrationSubmitStatus.idle;
 
   RegistrationDraft get draft => _draft;
-  RegistrationStep get currentStep => RegistrationStep.values[_stepIndex];
+  List<RegistrationStep> get _steps => !isSurveyOnly && _draft.role == 'Parent'
+      ? const [RegistrationStep.name, RegistrationStep.terms]
+      : RegistrationStep.values;
+  RegistrationStep get currentStep => _steps[_stepIndex];
   int get stepIndex => _stepIndex;
-  int get stepCount => RegistrationStep.values.length;
+  int get stepCount => _steps.length;
   double get progress => (_stepIndex + 1) / stepCount;
   bool get canGoBack => _stepIndex > 0;
   bool get isLastStep => _stepIndex == stepCount - 1;
@@ -53,6 +56,13 @@ class RegistrationViewModel extends ChangeNotifier {
 
   void updatePassword(String value) {
     _draft = _draft.copyWith(password: value);
+    _clearMessages();
+  }
+
+  void updateRole(String value) {
+    if (isSurveyOnly || (value != 'Child' && value != 'Parent')) return;
+    _draft = _draft.copyWith(role: value);
+    _stepIndex = 0;
     _clearMessages();
   }
 
@@ -126,7 +136,7 @@ class RegistrationViewModel extends ChangeNotifier {
           _draft.childName,
           _draft.email.trim(),
           _draft.password,
-          'Child',
+          _draft.role,
         );
         if (!success) {
           _submitStatus = RegistrationSubmitStatus.failure;
@@ -136,7 +146,9 @@ class RegistrationViewModel extends ChangeNotifier {
         }
       }
 
-      await _profileStorage.saveProfile(_draft.toProfile());
+      if (isSurveyOnly || _draft.role == 'Child') {
+        await _profileStorage.saveProfile(_draft.toProfile());
+      }
       _submitStatus = RegistrationSubmitStatus.success;
       notifyListeners();
       return true;
@@ -158,7 +170,7 @@ class RegistrationViewModel extends ChangeNotifier {
   String? _validateCurrentStep() {
     return switch (currentStep) {
       RegistrationStep.name => _validateName(),
-      RegistrationStep.age => _validateAge(),
+      RegistrationStep.age => _draft.role == 'Parent' ? null : _validateAge(),
       RegistrationStep.gender =>
         _draft.gender == null ? 'Hãy chọn giới tính của bé.' : null,
       RegistrationStep.goals =>
@@ -177,7 +189,9 @@ class RegistrationViewModel extends ChangeNotifier {
   String? _validateName() {
     final name = _draft.childName.trim();
     if (name.isEmpty) {
-      return 'Hãy nhập tên của bé.';
+      return _draft.role == 'Parent'
+          ? 'Hãy nhập họ tên phụ huynh.'
+          : 'Hãy nhập tên của bé.';
     }
     if (name.length < 2) {
       return 'Tên cần có ít nhất 2 ký tự.';

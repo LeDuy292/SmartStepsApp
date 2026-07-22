@@ -9,6 +9,7 @@ import 'users/user_list_view.dart';
 import 'content/island_list_view.dart';
 import 'content/situation_list_view.dart';
 import 'content/skill_list_view.dart';
+import 'operations/admin_operations_view.dart';
 
 class AdminLayout extends StatefulWidget {
   const AdminLayout({super.key});
@@ -26,6 +27,7 @@ class _AdminLayoutState extends State<AdminLayout> {
     const IslandListView(),
     const SituationListView(),
     const SkillListView(),
+    const AdminOperationsView(),
   ];
 
   @override
@@ -49,8 +51,11 @@ class _AdminLayoutState extends State<AdminLayout> {
                 'assets/images/logo.png', // Assuming there's a logo or use icon
                 width: 48,
                 height: 48,
-                errorBuilder: (context, error, stackTrace) =>
-                    const Icon(Icons.admin_panel_settings, size: 48, color: DuoColors.primaryYellow),
+                errorBuilder: (context, error, stackTrace) => const Icon(
+                  Icons.admin_panel_settings,
+                  size: 48,
+                  color: DuoColors.primaryYellow,
+                ),
               ),
             ),
             trailing: Expanded(
@@ -70,7 +75,9 @@ class _AdminLayoutState extends State<AdminLayout> {
                               profileStorage: const LocalProfileStorage(),
                               onLogin: (ctx) {
                                 Navigator.of(ctx).pushReplacement(
-                                  MaterialPageRoute(builder: (_) => const AdminLayout()),
+                                  MaterialPageRoute(
+                                    builder: (_) => const AdminLayout(),
+                                  ),
                                 );
                               },
                               onRegistrationCompleted: (_) {},
@@ -110,12 +117,19 @@ class _AdminLayoutState extends State<AdminLayout> {
                 selectedIcon: Icon(Icons.star),
                 label: Text('Kỹ năng'),
               ),
+              NavigationRailDestination(
+                icon: Icon(Icons.support_agent_outlined),
+                selectedIcon: Icon(Icons.support_agent),
+                label: Text('Vận hành'),
+              ),
             ],
           ),
-          const VerticalDivider(thickness: 1, width: 1, color: DuoColors.border),
-          Expanded(
-            child: _views[_selectedIndex],
+          const VerticalDivider(
+            thickness: 1,
+            width: 1,
+            color: DuoColors.border,
           ),
+          Expanded(child: _views[_selectedIndex]),
         ],
       ),
     );

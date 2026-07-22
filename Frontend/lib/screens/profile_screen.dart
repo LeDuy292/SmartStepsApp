@@ -1,20 +1,25 @@
 import 'package:flutter/material.dart';
 
 import '../models/child_profile.dart';
+import '../services/auth_service.dart';
+import '../services/family_service.dart';
 import '../services/local_profile_storage.dart';
 import '../services/registration_avatar_service.dart';
 import '../theme/duo_theme.dart';
 import '../widgets/duo_components.dart';
+import 'family_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({
     super.key,
     required this.profileStorage,
     required this.onLogout,
+    this.onManagePremium,
   });
 
   final LocalProfileStorage profileStorage;
   final void Function(BuildContext context) onLogout;
+  final VoidCallback? onManagePremium;
 
   @override
   State<ProfileScreen> createState() => _ProfileScreenState();
@@ -107,6 +112,62 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ],
                   ),
                   const SizedBox(height: 18),
+                  FutureBuilder<String?>(
+                    future: AuthService().getUserRole(),
+                    builder: (context, roleSnapshot) {
+                      if (roleSnapshot.data == 'Child') {
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 10),
+                          child: FilledButton.icon(
+                            onPressed: _showParentLinkCode,
+                            icon: const Icon(Icons.link_rounded),
+                            label: const Text('Mã liên kết phụ huynh'),
+                            style: FilledButton.styleFrom(
+                              minimumSize: const Size(0, 52),
+                            ),
+                          ),
+                        );
+                      }
+                      if (roleSnapshot.data != 'Parent') {
+                        return const SizedBox.shrink();
+                      }
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 10),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            OutlinedButton.icon(
+                              onPressed: () => Navigator.of(context).push(
+                                MaterialPageRoute<void>(
+                                  builder: (_) => const FamilyScreen(),
+                                ),
+                              ),
+                              icon: const Icon(Icons.family_restroom_rounded),
+                              label: const Text('Quản lý trẻ và giao bài'),
+                              style: OutlinedButton.styleFrom(
+                                minimumSize: const Size(0, 52),
+                              ),
+                            ),
+                            if (widget.onManagePremium != null) ...[
+                              const SizedBox(height: 10),
+                              FilledButton.icon(
+                                onPressed: widget.onManagePremium,
+                                icon: const Icon(
+                                  Icons.workspace_premium_rounded,
+                                ),
+                                label: const Text(
+                                  'Thanh toán và quản lý Premium',
+                                ),
+                                style: FilledButton.styleFrom(
+                                  minimumSize: const Size(0, 52),
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      );
+                    },
+                  ),
                   _ProfileActions(
                     onRefresh: () {
                       setState(() {
@@ -138,6 +199,61 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
 
     widget.onLogout(context);
+  }
+
+  Future<void> _showParentLinkCode() async {
+    try {
+      final result = await FamilyService().createLinkCode();
+      if (!mounted) return;
+      final code = result['code']?.toString() ?? '';
+      final expiresAt = DateTime.tryParse(
+        result['expiresAt']?.toString() ?? '',
+      );
+      await showDialog<void>(
+        context: context,
+        builder: (context) => AlertDialog(
+          icon: const Icon(Icons.family_restroom_rounded, size: 42),
+          title: const Text('Mã liên kết phụ huynh'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                'Phụ huynh nhập mã này trong trang Quản lý trẻ.',
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 18),
+              SelectableText(
+                code,
+                style: const TextStyle(
+                  fontSize: 36,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 8,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                expiresAt == null
+                    ? 'Mã có hiệu lực trong 15 phút.'
+                    : 'Mã hết hạn lúc ${TimeOfDay.fromDateTime(expiresAt.toLocal()).format(context)}.',
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: DuoColors.textSecondary),
+              ),
+            ],
+          ),
+          actions: [
+            FilledButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Đóng'),
+            ),
+          ],
+        ),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Không tạo được mã liên kết: $error')),
+      );
+    }
   }
 }
 
