@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 
 import '../../../services/admin_api_service.dart';
+import '../admin_components.dart';
 
 class UserDetailScreen extends StatefulWidget {
-  final int userId;
   const UserDetailScreen({super.key, required this.userId});
+
+  final int userId;
 
   @override
   State<UserDetailScreen> createState() => _UserDetailScreenState();
@@ -38,126 +40,168 @@ class _UserDetailScreenState extends State<UserDetailScreen> {
     }
   }
 
+  String _roleLabel(String? role) {
+    switch (role) {
+      case 'Child':
+        return 'Trẻ em';
+      case 'Parent':
+        return 'Phụ huynh';
+      case 'Admin':
+        return 'Admin';
+      default:
+        return role ?? 'Không rõ';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+      return const Scaffold(
+        body: AdminLoadingState(label: 'Đang tải hồ sơ...'),
+      );
     }
 
     if (_user == null) {
       return Scaffold(
         appBar: AppBar(title: const Text('Chi tiết người dùng')),
-        body: const Center(child: Text('Không tìm thấy người dùng')),
+        body: const AdminEmptyState(
+          icon: Icons.person_off_rounded,
+          title: 'Không tìm thấy người dùng',
+          message: 'Tài khoản có thể đã bị xóa hoặc không còn khả dụng.',
+        ),
       );
     }
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Chi tiết người dùng')),
+      backgroundColor: AdminColors.page,
+      appBar: AppBar(
+        title: const Text('Chi tiết người dùng'),
+        backgroundColor: AdminColors.page,
+        scrolledUnderElevation: 0,
+      ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
+        child: AdminPageFrame(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              AdminHeader(
+                icon: Icons.person_rounded,
+                title: _user!['fullName'] ?? 'Người dùng',
+                subtitle: _user!['email'] ?? 'Chưa có email',
+                action: AdminStatusChip(status: _user!['status']),
+              ),
+              const SizedBox(height: 12),
+              AdminPanel(
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Text(
-                      'Thông tin cơ bản',
-                      style: Theme.of(context).textTheme.titleLarge,
+                    const AdminSectionTitle(
+                      icon: Icons.badge_outlined,
+                      title: 'Thông tin cơ bản',
                     ),
-                    const Divider(),
-                    ListTile(
-                      leading: const Icon(Icons.person),
-                      title: const Text('Họ Tên'),
-                      subtitle: Text(_user!['fullName'] ?? ''),
+                    const SizedBox(height: 12),
+                    _InfoRow(
+                      icon: Icons.person_outline_rounded,
+                      label: 'Họ tên',
+                      value: _user!['fullName'] ?? '',
                     ),
-                    ListTile(
-                      leading: const Icon(Icons.email),
-                      title: const Text('Email'),
-                      subtitle: Text(_user!['email'] ?? ''),
+                    _InfoRow(
+                      icon: Icons.email_outlined,
+                      label: 'Email',
+                      value: _user!['email'] ?? '',
                     ),
-                    ListTile(
-                      leading: const Icon(Icons.security),
-                      title: const Text('Vai trò'),
-                      subtitle: Text(_user!['role'] ?? ''),
-                    ),
-                    ListTile(
-                      leading: const Icon(Icons.info_outline),
-                      title: const Text('Trạng thái'),
-                      subtitle: Text(
-                        _user!['status'] ?? '',
-                        style: TextStyle(
-                          color: _user!['status'] == 'Active'
-                              ? Colors.green
-                              : Colors.red,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
+                    _InfoRow(
+                      icon: Icons.security_rounded,
+                      label: 'Vai trò',
+                      value: _roleLabel(_user!['role']),
                     ),
                   ],
                 ),
               ),
-            ),
-            const SizedBox(height: 16),
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
+              const SizedBox(height: 12),
+              AdminPanel(
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Text(
-                      'Thống kê học tập',
-                      style: Theme.of(context).textTheme.titleLarge,
+                    const AdminSectionTitle(
+                      icon: Icons.insights_rounded,
+                      title: 'Thống kê học tập',
                     ),
-                    const Divider(),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    const SizedBox(height: 12),
+                    Wrap(
+                      spacing: 10,
+                      runSpacing: 10,
                       children: [
-                        _buildStatBox(
-                          'Bài học đã tham gia',
-                          _user!['progressCount'].toString(),
-                          Colors.blue,
+                        AdminMetricPill(
+                          icon: Icons.menu_book_rounded,
+                          label: 'Bài học',
+                          value: '${_user!['progressCount'] ?? 0}',
+                          color: AdminColors.blue,
                         ),
-                        _buildStatBox(
-                          'Câu hỏi đã trả lời',
-                          _user!['answersCount'].toString(),
-                          Colors.orange,
+                        AdminMetricPill(
+                          icon: Icons.question_answer_rounded,
+                          label: 'Câu trả lời',
+                          value: '${_user!['answersCount'] ?? 0}',
+                          color: AdminColors.amber,
                         ),
                       ],
                     ),
                   ],
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
   }
+}
 
-  Widget _buildStatBox(String label, String value, Color color) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: color.withValues(alpha: 0.3)),
-      ),
-      child: Column(
+class _InfoRow extends StatelessWidget {
+  const _InfoRow({
+    required this.icon,
+    required this.label,
+    required this.value,
+  });
+
+  final IconData icon;
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: color,
+          Icon(icon, size: 22, color: AdminColors.teal),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: const TextStyle(
+                    color: AdminColors.muted,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  value,
+                  style: const TextStyle(
+                    color: AdminColors.ink,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ],
             ),
           ),
-          const SizedBox(height: 8),
-          Text(label, style: const TextStyle(fontWeight: FontWeight.bold)),
         ],
       ),
     );

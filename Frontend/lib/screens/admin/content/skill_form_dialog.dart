@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+
 import '../../../services/admin_api_service.dart';
+import '../admin_components.dart';
 
 class SkillFormDialog extends StatefulWidget {
-  final Map<String, dynamic>? skill;
-
   const SkillFormDialog({super.key, this.skill});
+
+  final Map<String, dynamic>? skill;
 
   @override
   State<SkillFormDialog> createState() => _SkillFormDialogState();
@@ -15,8 +17,8 @@ class _SkillFormDialogState extends State<SkillFormDialog> {
   final _formKey = GlobalKey<FormState>();
   bool _isLoading = false;
 
-  late TextEditingController _nameCtrl;
-  late TextEditingController _descCtrl;
+  late final TextEditingController _nameCtrl;
+  late final TextEditingController _descCtrl;
 
   @override
   void initState() {
@@ -25,14 +27,21 @@ class _SkillFormDialogState extends State<SkillFormDialog> {
     _descCtrl = TextEditingController(text: widget.skill?['description'] ?? '');
   }
 
+  @override
+  void dispose() {
+    _descCtrl.dispose();
+    _nameCtrl.dispose();
+    super.dispose();
+  }
+
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => _isLoading = true);
     try {
       final data = {
-        'name': _nameCtrl.text,
-        'description': _descCtrl.text,
+        'name': _nameCtrl.text.trim(),
+        'description': _descCtrl.text.trim(),
       };
 
       if (widget.skill == null) {
@@ -40,10 +49,14 @@ class _SkillFormDialogState extends State<SkillFormDialog> {
       } else {
         await _api.updateSkill(widget.skill!['skillId'], data);
       }
-      
+
       if (mounted) Navigator.pop(context, true);
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Lỗi: $e')));
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Lỗi: $e')));
+      }
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -51,8 +64,23 @@ class _SkillFormDialogState extends State<SkillFormDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final isEditing = widget.skill != null;
+
     return AlertDialog(
-      title: Text(widget.skill == null ? 'Thêm Kỹ năng mới' : 'Chỉnh sửa Kỹ năng'),
+      insetPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 24),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+      title: Row(
+        children: [
+          Icon(
+            isEditing ? Icons.edit_note_rounded : Icons.add_task_rounded,
+            color: AdminColors.violet,
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(isEditing ? 'Chỉnh sửa kỹ năng' : 'Thêm kỹ năng'),
+          ),
+        ],
+      ),
       content: SingleChildScrollView(
         child: SizedBox(
           width: (MediaQuery.of(context).size.width * 0.9).clamp(280.0, 480.0),
@@ -63,14 +91,25 @@ class _SkillFormDialogState extends State<SkillFormDialog> {
               children: [
                 TextFormField(
                   controller: _nameCtrl,
-                  decoration: const InputDecoration(labelText: 'Tên Kỹ năng (*)', border: OutlineInputBorder()),
-                  validator: (v) => (v == null || v.isEmpty) ? 'Vui lòng nhập tên kỹ năng' : null,
+                  textInputAction: TextInputAction.next,
+                  decoration: const InputDecoration(
+                    labelText: 'Tên kỹ năng',
+                    prefixIcon: Icon(Icons.psychology_alt_outlined),
+                    border: OutlineInputBorder(),
+                  ),
+                  validator: (value) => value == null || value.trim().isEmpty
+                      ? 'Vui lòng nhập tên kỹ năng'
+                      : null,
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 14),
                 TextFormField(
                   controller: _descCtrl,
-                  decoration: const InputDecoration(labelText: 'Mô tả', border: OutlineInputBorder()),
                   maxLines: 3,
+                  decoration: const InputDecoration(
+                    labelText: 'Mô tả',
+                    prefixIcon: Icon(Icons.notes_rounded),
+                    border: OutlineInputBorder(),
+                  ),
                 ),
               ],
             ),
@@ -78,10 +117,20 @@ class _SkillFormDialogState extends State<SkillFormDialog> {
         ),
       ),
       actions: [
-        TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Hủy')),
-        FilledButton(
+        TextButton(
+          onPressed: _isLoading ? null : () => Navigator.pop(context, false),
+          child: const Text('Hủy'),
+        ),
+        FilledButton.icon(
           onPressed: _isLoading ? null : _submit,
-          child: _isLoading ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)) : const Text('Lưu'),
+          icon: _isLoading
+              ? const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Icon(Icons.save_rounded),
+          label: Text(_isLoading ? 'Đang lưu' : 'Lưu'),
         ),
       ],
     );
