@@ -10,6 +10,7 @@ class RegistrationDraft {
     this.acceptedTerms = false,
     this.email = '',
     this.password = '',
+    this.role = 'Child',
   });
 
   final String childName;
@@ -20,6 +21,7 @@ class RegistrationDraft {
   final bool acceptedTerms;
   final String email;
   final String password;
+  final String role;
 
   RegistrationDraft copyWith({
     String? childName,
@@ -30,6 +32,7 @@ class RegistrationDraft {
     bool? acceptedTerms,
     String? email,
     String? password,
+    String? role,
   }) {
     return RegistrationDraft(
       childName: childName ?? this.childName,
@@ -40,6 +43,7 @@ class RegistrationDraft {
       acceptedTerms: acceptedTerms ?? this.acceptedTerms,
       email: email ?? this.email,
       password: password ?? this.password,
+      role: role ?? this.role,
     );
   }
 

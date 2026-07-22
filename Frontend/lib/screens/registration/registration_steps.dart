@@ -26,6 +26,8 @@ class RegistrationNameStep extends StatelessWidget {
     required this.onNameChanged,
     required this.onEmailChanged,
     required this.onPasswordChanged,
+    required this.selectedRole,
+    required this.onRoleChanged,
     this.isSurveyOnly = false,
   });
 
@@ -35,6 +37,8 @@ class RegistrationNameStep extends StatelessWidget {
   final ValueChanged<String> onNameChanged;
   final ValueChanged<String> onEmailChanged;
   final ValueChanged<String> onPasswordChanged;
+  final String selectedRole;
+  final ValueChanged<String> onRoleChanged;
   final bool isSurveyOnly;
 
   @override
@@ -45,6 +49,25 @@ class RegistrationNameStep extends StatelessWidget {
       mascotAsset: 'assets/images/mascot/mascot-cat-happy-wave.webp',
       child: Column(
         children: [
+          if (!isSurveyOnly) ...[
+            SegmentedButton<String>(
+              segments: const [
+                ButtonSegment<String>(
+                  value: 'Parent',
+                  icon: Icon(Icons.family_restroom_rounded),
+                  label: Text('Phụ huynh'),
+                ),
+                ButtonSegment<String>(
+                  value: 'Child',
+                  icon: Icon(Icons.child_care_rounded),
+                  label: Text('Trẻ em'),
+                ),
+              ],
+              selected: {selectedRole},
+              onSelectionChanged: (roles) => onRoleChanged(roles.first),
+            ),
+            const SizedBox(height: 16),
+          ],
           TextField(
             key: const ValueKey('registration-name-field'),
             controller: nameController,
@@ -58,7 +81,9 @@ class RegistrationNameStep extends StatelessWidget {
               fontSize: 18,
               fontWeight: FontWeight.w700,
             ),
-            decoration: _inputDecoration('Tên của bé'),
+            decoration: _inputDecoration(
+              selectedRole == 'Parent' ? 'Họ tên phụ huynh' : 'Tên của bé',
+            ),
           ),
           if (!isSurveyOnly) ...[
             const SizedBox(height: 12),
@@ -73,7 +98,11 @@ class RegistrationNameStep extends StatelessWidget {
                 fontSize: 18,
                 fontWeight: FontWeight.w700,
               ),
-              decoration: _inputDecoration('Email phụ huynh'),
+              decoration: _inputDecoration(
+                selectedRole == 'Parent'
+                    ? 'Email phụ huynh'
+                    : 'Email tài khoản trẻ',
+              ),
             ),
             const SizedBox(height: 12),
             TextField(
@@ -321,7 +350,9 @@ class RegistrationTermsStep extends StatelessWidget {
 
     return _StepFrame(
       title: 'Sẵn sàng bắt đầu',
-      subtitle: 'Phụ huynh kiểm tra lại hồ sơ trước khi lưu trên thiết bị.',
+      subtitle: draft.role == 'Parent'
+          ? 'Kiểm tra lại tài khoản phụ huynh trước khi hoàn tất.'
+          : 'Phụ huynh kiểm tra lại hồ sơ trước khi lưu trên thiết bị.',
       mascotAsset: 'assets/images/mascot/mascot-cat-happy.webp',
       child: Column(
         children: [
@@ -335,14 +366,20 @@ class RegistrationTermsStep extends StatelessWidget {
             child: Column(
               children: [
                 _SummaryRow(label: 'Tên', value: draft.childName.trim()),
-                _SummaryRow(label: 'Tuổi', value: '${draft.age} tuổi'),
-                _SummaryRow(label: 'Giới tính', value: draft.gender ?? ''),
-                _SummaryRow(label: 'Avatar', value: avatarLabel),
                 _SummaryRow(
-                  label: 'Mục tiêu',
-                  value: '${draft.learningGoals.length} mục tiêu đã chọn',
-                  showDivider: false,
+                  label: 'Vai trò',
+                  value: draft.role == 'Parent' ? 'Phụ huynh' : 'Trẻ em',
                 ),
+                if (draft.role == 'Child') ...[
+                  _SummaryRow(label: 'Tuổi', value: '${draft.age} tuổi'),
+                  _SummaryRow(label: 'Giới tính', value: draft.gender ?? ''),
+                  _SummaryRow(label: 'Avatar', value: avatarLabel),
+                  _SummaryRow(
+                    label: 'Mục tiêu',
+                    value: '${draft.learningGoals.length} mục tiêu đã chọn',
+                    showDivider: false,
+                  ),
+                ],
               ],
             ),
           ),

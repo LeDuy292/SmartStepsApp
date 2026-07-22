@@ -83,6 +83,7 @@ public sealed class PremiumController : ControllerBase
         {
             return Forbid();
         }
+        if (!User.IsInRole("Parent") && !User.IsInRole("Admin")) return Forbid();
         var user = await _dbContext.Users.SingleOrDefaultAsync(
             item => item.UserId == currentUserId,
             cancellationToken);
@@ -132,6 +133,7 @@ public sealed class PremiumController : ControllerBase
         RedeemPremiumCodeRequest request,
         CancellationToken cancellationToken)
     {
+        if (!User.IsInRole("Parent") && !User.IsInRole("Admin")) return Forbid();
         if (!TryResolveRequestedUserId(request.UserId, out var targetUserId))
         {
             return Forbid();
@@ -202,6 +204,7 @@ public sealed class PremiumController : ControllerBase
         CreatePremiumPaymentRequest request,
         CancellationToken cancellationToken)
     {
+        if (!User.IsInRole("Parent") && !User.IsInRole("Admin")) return Forbid();
         if (!Plans.TryGetValue(request.PlanCode, out var plan))
         {
             return BadRequest(new { message = "Unknown premium plan." });
@@ -395,6 +398,24 @@ public sealed class PremiumController : ControllerBase
         return Ok(await BuildStatusResponseAsync(payment.UserId, cancellationToken));
     }
 
+    [HttpGet("payments")]
+    [Authorize]
+    public async Task<IActionResult> GetPaymentHistory(
+        [FromQuery] int? userId,
+        CancellationToken cancellationToken)
+    {
+        if (!TryGetCurrentUserId(out var currentUserId)) return Forbid();
+        var targetUserId = userId ?? currentUserId;
+        if (targetUserId != currentUserId && !User.IsInRole("Admin")) return Forbid();
+        return Ok(await _dbContext.PremiumPayments.AsNoTracking()
+            .Where(item => item.UserId == targetUserId)
+            .OrderByDescending(item => item.CreatedAt)
+            .Select(item => new PremiumPaymentHistoryResponse(
+                item.PaymentId, item.OrderCode, item.PlanCode, item.Amount, item.Currency,
+                item.Status, item.PaidAt, item.CreatedAt, item.UpdatedAt))
+            .ToListAsync(cancellationToken));
+    }
+
     [HttpPost("payos/webhook")]
     [AllowAnonymous]
     [ProducesResponseType(StatusCodes.Status200OK)]
@@ -513,12 +534,18 @@ public sealed class PremiumController : ControllerBase
         CancellationToken cancellationToken)
     {
         var now = DateTime.UtcNow;
-        await ExpireSubscriptionsAsync(userId, now, cancellationToken);
+        var entitlementUserId = await _dbContext.Users.AsNoTracking()
+            .Where(user => user.UserId == userId)
+            .Select(user => user.Role == "Child" && user.ParentId != null
+                ? user.ParentId.Value
+                : user.UserId)
+            .SingleAsync(cancellationToken);
+        await ExpireSubscriptionsAsync(entitlementUserId, now, cancellationToken);
 
         var activeSubscriptions = await _dbContext.PremiumSubscriptions
             .AsNoTracking()
             .Where(subscription =>
-                subscription.UserId == userId &&
+                subscription.UserId == entitlementUserId &&
                 subscription.Status == "Active" &&
                 (subscription.ExpiresAt == null || subscription.ExpiresAt > now))
             .OrderByDescending(subscription => subscription.ExpiresAt == null)
@@ -529,7 +556,7 @@ public sealed class PremiumController : ControllerBase
         var canRedeemPremiumCode = !await _dbContext.PremiumCodeRedemptions
             .AsNoTracking()
             .AnyAsync(
-                redemption => redemption.UserId == userId && redemption.Code == MvpPremiumCode,
+                redemption => redemption.UserId == entitlementUserId && redemption.Code == MvpPremiumCode,
                 cancellationToken);
 
         return new PremiumStatusResponse(
@@ -815,6 +842,10 @@ public sealed record CreatePremiumPaymentResponse(
     string? PaymentLinkId);
 
 public sealed record ConfirmPremiumPaymentRequest(int? UserId);
+
+public sealed record PremiumPaymentHistoryResponse(
+    int PaymentId, long OrderCode, string PlanCode, int Amount, string Currency,
+    string Status, DateTime? PaidAt, DateTime CreatedAt, DateTime? UpdatedAt);
 
 public sealed record ConfirmPayOsWebhookRequest(string? WebhookUrl);
 
