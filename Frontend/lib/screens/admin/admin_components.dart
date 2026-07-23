@@ -24,11 +24,20 @@ class AdminColors {
   static const cream = Color(0xFFFFFCF4);
 }
 
+String adminInitial(String value) {
+  final trimmed = value.trim();
+  if (trimmed.isEmpty) {
+    return 'A';
+  }
+
+  return String.fromCharCode(trimmed.runes.first).toUpperCase();
+}
+
 class AdminPageFrame extends StatelessWidget {
   const AdminPageFrame({
     super.key,
     required this.child,
-    this.padding = const EdgeInsets.fromLTRB(16, 12, 16, 96),
+    this.padding = const EdgeInsets.fromLTRB(16, 12, 16, 12),
   });
 
   final Widget child;
@@ -104,7 +113,7 @@ class AdminTopBar extends StatelessWidget {
           radius: 19,
           backgroundColor: DuoColors.primaryYellow.withValues(alpha: 0.35),
           child: Text(
-            avatarText.characters.first.toUpperCase(),
+            adminInitial(avatarText),
             style: const TextStyle(
               color: AdminColors.ink,
               fontWeight: FontWeight.w900,
@@ -416,6 +425,70 @@ class AdminStatusChip extends StatelessWidget {
           fontSize: 11,
           fontWeight: FontWeight.w900,
         ),
+      ),
+    );
+  }
+}
+
+class AdminPagination extends StatelessWidget {
+  const AdminPagination({
+    super.key,
+    required this.page,
+    required this.totalPages,
+    required this.onPrevious,
+    required this.onNext,
+    this.showWhenSinglePage = false,
+  });
+
+  final int page;
+  final int totalPages;
+  final VoidCallback? onPrevious;
+  final VoidCallback? onNext;
+  final bool showWhenSinglePage;
+
+  @override
+  Widget build(BuildContext context) {
+    if (totalPages <= 1 && !showWhenSinglePage) {
+      return const SizedBox.shrink();
+    }
+
+    final safeTotal = totalPages < 1 ? 1 : totalPages;
+    final safePage = page.clamp(1, safeTotal);
+
+    return SizedBox(
+      height: 42,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          AdminCircleButton(
+            icon: Icons.chevron_left_rounded,
+            tooltip: 'Trang trước',
+            onPressed: onPrevious,
+            color: AdminColors.ink,
+            backgroundColor: const Color(0xFFF3EEDA),
+          ),
+          Container(
+            width: 104,
+            alignment: Alignment.center,
+            child: Text(
+              'Trang $safePage / $safeTotal',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                color: AdminColors.ink,
+                fontSize: 14,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+          ),
+          AdminCircleButton(
+            icon: Icons.chevron_right_rounded,
+            tooltip: 'Trang sau',
+            onPressed: onNext,
+            color: AdminColors.ink,
+            backgroundColor: const Color(0xFFF3EEDA),
+          ),
+        ],
       ),
     );
   }

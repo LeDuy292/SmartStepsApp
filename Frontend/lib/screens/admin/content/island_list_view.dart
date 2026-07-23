@@ -18,6 +18,8 @@ class _IslandListViewState extends State<IslandListView> {
   List<dynamic> _islands = [];
   bool _isLoading = true;
   String _searchQuery = '';
+  int _page = 1;
+  static const int _pageSize = 3;
 
   @override
   void initState() {
@@ -96,9 +98,28 @@ class _IslandListViewState extends State<IslandListView> {
     }).toList();
   }
 
+  int get _totalPages {
+    final count = _visibleIslands.length;
+    return count == 0 ? 1 : ((count - 1) ~/ _pageSize) + 1;
+  }
+
+  List<dynamic> get _pagedIslands {
+    final safePage = _page > _totalPages ? _totalPages : _page;
+    final start = (safePage - 1) * _pageSize;
+    final islands = _visibleIslands;
+    if (start >= islands.length) {
+      return const [];
+    }
+    final end = (start + _pageSize) > islands.length
+        ? islands.length
+        : start + _pageSize;
+    return islands.sublist(start, end);
+  }
+
   @override
   Widget build(BuildContext context) {
     final visibleIslands = _visibleIslands;
+    final pagedIslands = _pagedIslands;
     final totalLessons = _islands.fold<int>(
       0,
       (sum, island) => sum + ((island['situationCount'] as num?)?.toInt() ?? 0),
@@ -121,7 +142,10 @@ class _IslandListViewState extends State<IslandListView> {
           const SizedBox(height: 14),
           AdminSearchBar(
             hintText: 'Tìm kiếm nhóm bài học...',
-            onChanged: (value) => setState(() => _searchQuery = value),
+            onChanged: (value) => setState(() {
+              _searchQuery = value;
+              _page = 1;
+            }),
             onFilter: () {},
           ),
           const SizedBox(height: 16),
@@ -157,10 +181,10 @@ class _IslandListViewState extends State<IslandListView> {
                     message: 'Tạo nhóm đầu tiên để tổ chức hành trình học.',
                   )
                 : ListView.separated(
-                    itemCount: visibleIslands.length,
+                    itemCount: pagedIslands.length,
                     separatorBuilder: (_, _) => const SizedBox(height: 12),
                     itemBuilder: (context, index) {
-                      final island = visibleIslands[index];
+                      final island = pagedIslands[index];
                       return _IslandCard(
                         island: island,
                         color: _cardColor(index),
@@ -171,7 +195,14 @@ class _IslandListViewState extends State<IslandListView> {
                     },
                   ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 8),
+          AdminPagination(
+            page: _page,
+            totalPages: _totalPages,
+            onPrevious: _page > 1 ? () => setState(() => _page--) : null,
+            onNext: _page < _totalPages ? () => setState(() => _page++) : null,
+          ),
+          const SizedBox(height: 8),
           FilledButton(
             onPressed: () => _openForm(),
             style: FilledButton.styleFrom(
@@ -224,7 +255,6 @@ class _IslandCard extends StatelessWidget {
   final IconData icon;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
-
   @override
   Widget build(BuildContext context) {
     return AdminPanel(
@@ -321,7 +351,6 @@ class _SmallIcon extends StatelessWidget {
 
   final IconData icon;
   final VoidCallback onTap;
-
   @override
   Widget build(BuildContext context) {
     return IconButton(

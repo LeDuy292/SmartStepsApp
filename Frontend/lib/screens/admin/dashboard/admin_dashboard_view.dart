@@ -77,7 +77,7 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
           child: SingleChildScrollView(
             physics: const AlwaysScrollableScrollPhysics(),
             child: AdminPageFrame(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 96),
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
@@ -464,7 +464,7 @@ class _FeedbackTile extends StatelessWidget {
             radius: 18,
             backgroundColor: DuoColors.primaryYellow,
             child: Text(
-              email.characters.first.toUpperCase(),
+              adminInitial(email.toString()),
               style: const TextStyle(
                 color: AdminColors.ink,
                 fontWeight: FontWeight.w900,

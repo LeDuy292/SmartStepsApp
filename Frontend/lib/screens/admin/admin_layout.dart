@@ -10,6 +10,7 @@ import 'content/situation_list_view.dart';
 import 'content/skill_list_view.dart';
 import 'operations/admin_operations_view.dart';
 import 'dashboard/admin_dashboard_view.dart';
+import 'feedback_list_view.dart';
 import 'users/user_list_view.dart';
 
 class AdminLayout extends StatefulWidget {
@@ -22,14 +23,19 @@ class AdminLayout extends StatefulWidget {
 class _AdminLayoutState extends State<AdminLayout> {
   int _selectedIndex = 0;
 
-  final List<Widget> _views = [
-    const AdminDashboardView(),
-    const UserListView(),
-    const IslandListView(),
-    const SituationListView(),
-    const SkillListView(),
-    const AdminOperationsView(),
-  ];
+  Widget _buildView({required bool showPageLogout}) {
+    final VoidCallback? onLogout = showPageLogout ? _handleLogout : null;
+
+    return switch (_selectedIndex) {
+      0 => AdminDashboardView(onLogout: onLogout),
+      1 => FeedbackListView(onLogout: onLogout),
+      2 => UserListView(onLogout: onLogout),
+      3 => IslandListView(onLogout: onLogout),
+      4 => SituationListView(onLogout: onLogout),
+      _ => SkillListView(onLogout: onLogout),
+    };
+  }
+
 
   Future<void> _handleLogout() async {
     await AuthService().logout();
@@ -55,29 +61,54 @@ class _AdminLayoutState extends State<AdminLayout> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: DuoColors.background,
-      body: Row(
-        children: [
-          NavigationRail(
-            backgroundColor: DuoColors.card,
-            selectedIndex: _selectedIndex,
-            onDestinationSelected: (int index) {
-              setState(() {
-                _selectedIndex = index;
-              });
-            },
-            extended: MediaQuery.of(context).size.width >= 800,
-            leading: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 20),
-              child: Image.asset(
-                'assets/images/logo.png', // Assuming there's a logo or use icon
-                width: 48,
-                height: 48,
-                errorBuilder: (context, error, stackTrace) => const Icon(
-                  Icons.admin_panel_settings,
-                  size: 48,
-                  color: DuoColors.primaryYellow,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isMobile = constraints.maxWidth < 600;
+
+        if (isMobile) {
+          return Scaffold(
+            backgroundColor: DuoColors.background,
+            body: _buildView(showPageLogout: true),
+            bottomNavigationBar: NavigationBar(
+              height: 74,
+              backgroundColor: DuoColors.card,
+              indicatorColor: DuoColors.primaryYellow.withValues(alpha: 0.35),
+              labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+              selectedIndex: _selectedIndex,
+              onDestinationSelected: (index) {
+                setState(() => _selectedIndex = index);
+              },
+              destinations: const [
+                NavigationDestination(
+                  icon: Icon(Icons.dashboard_outlined),
+                  selectedIcon: Icon(Icons.dashboard_rounded),
+                  label: 'Tổng quan',
+                ),
+                NavigationDestination(
+                  icon: Icon(Icons.rate_review_outlined),
+                  selectedIcon: Icon(Icons.rate_review_rounded),
+                  label: 'Phản hồi',
+                ),
+                NavigationDestination(
+                  icon: Icon(Icons.people_outline_rounded),
+                  selectedIcon: Icon(Icons.people_rounded),
+                  label: 'Người dùng',
+                ),
+                NavigationDestination(
+                  icon: Icon(Icons.map_outlined),
+                  selectedIcon: Icon(Icons.map_rounded),
+                  label: 'Nhóm',
+                ),
+                NavigationDestination(
+                  icon: Icon(Icons.menu_book_outlined),
+                  selectedIcon: Icon(Icons.menu_book_rounded),
+                  label: 'Bài học',
+                ),
+                NavigationDestination(
+                  icon: Icon(Icons.psychology_alt_outlined),
+                  selectedIcon: Icon(Icons.psychology_alt_rounded),
+                  label: 'Kỹ năng',
+
                 ),
               ),
             ),
@@ -99,6 +130,39 @@ class _AdminLayoutState extends State<AdminLayout> {
                     ),
                   ),
                 ),
+                destinations: const [
+                  NavigationRailDestination(
+                    icon: Icon(Icons.dashboard_outlined),
+                    selectedIcon: Icon(Icons.dashboard_rounded),
+                    label: Text('Tổng quan'),
+                  ),
+                  NavigationRailDestination(
+                    icon: Icon(Icons.rate_review_outlined),
+                    selectedIcon: Icon(Icons.rate_review_rounded),
+                    label: Text('Phản hồi'),
+                  ),
+                  NavigationRailDestination(
+                    icon: Icon(Icons.people_outline_rounded),
+                    selectedIcon: Icon(Icons.people_rounded),
+                    label: Text('Người dùng'),
+                  ),
+                  NavigationRailDestination(
+                    icon: Icon(Icons.map_outlined),
+                    selectedIcon: Icon(Icons.map_rounded),
+                    label: Text('Nhóm bài học'),
+                  ),
+                  NavigationRailDestination(
+                    icon: Icon(Icons.menu_book_outlined),
+                    selectedIcon: Icon(Icons.menu_book_rounded),
+                    label: Text('Bài học'),
+                  ),
+                  NavigationRailDestination(
+                    icon: Icon(Icons.psychology_alt_outlined),
+                    selectedIcon: Icon(Icons.psychology_alt_rounded),
+                    label: Text('Kỹ năng'),
+                  ),
+                ],
+
               ),
             ),
             destinations: const [

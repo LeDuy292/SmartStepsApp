@@ -24,6 +24,8 @@ class _SituationListViewState extends State<SituationListView> {
   String _selectedStatus = '';
   String _searchQuery = '';
   bool _isLoading = true;
+  int _page = 1;
+  static const int _pageSize = 3;
 
   @override
   void initState() {
@@ -122,6 +124,24 @@ class _SituationListViewState extends State<SituationListView> {
     }).toList();
   }
 
+  int get _totalPages {
+    final count = _visibleSituations.length;
+    return count == 0 ? 1 : ((count - 1) ~/ _pageSize) + 1;
+  }
+
+  List<dynamic> get _pagedSituations {
+    final safePage = _page > _totalPages ? _totalPages : _page;
+    final start = (safePage - 1) * _pageSize;
+    final situations = _visibleSituations;
+    if (start >= situations.length) {
+      return const [];
+    }
+    final end = (start + _pageSize) > situations.length
+        ? situations.length
+        : start + _pageSize;
+    return situations.sublist(start, end);
+  }
+
   void _showFilters() {
     showModalBottomSheet<void>(
       context: context,
@@ -157,8 +177,10 @@ class _SituationListViewState extends State<SituationListView> {
                       ),
                     ),
                   ],
-                  onChanged: (value) =>
-                      setState(() => _selectedIslandId = value),
+                  onChanged: (value) => setState(() {
+                    _selectedIslandId = value;
+                    _page = 1;
+                  }),
                 ),
                 const SizedBox(height: 12),
                 DropdownButtonFormField<String>(
@@ -176,8 +198,10 @@ class _SituationListViewState extends State<SituationListView> {
                     DropdownMenuItem(value: 'Draft', child: Text('Nháp')),
                     DropdownMenuItem(value: 'Hidden', child: Text('Ẩn')),
                   ],
-                  onChanged: (value) =>
-                      setState(() => _selectedStatus = value ?? ''),
+                  onChanged: (value) => setState(() {
+                    _selectedStatus = value ?? '';
+                    _page = 1;
+                  }),
                 ),
                 const SizedBox(height: 14),
                 FilledButton.icon(
@@ -199,6 +223,7 @@ class _SituationListViewState extends State<SituationListView> {
   @override
   Widget build(BuildContext context) {
     final visibleSituations = _visibleSituations;
+    final pagedSituations = _pagedSituations;
 
     return AdminPageFrame(
       child: Column(
@@ -220,7 +245,10 @@ class _SituationListViewState extends State<SituationListView> {
           const SizedBox(height: 12),
           AdminSearchBar(
             hintText: 'Tìm kiếm bài học...',
-            onChanged: (value) => setState(() => _searchQuery = value),
+            onChanged: (value) => setState(() {
+              _searchQuery = value;
+              _page = 1;
+            }),
             onFilter: _showFilters,
           ),
           const SizedBox(height: 12),
@@ -234,10 +262,10 @@ class _SituationListViewState extends State<SituationListView> {
                     message: 'Tạo bài học mới hoặc đổi bộ lọc.',
                   )
                 : ListView.separated(
-                    itemCount: visibleSituations.length,
+                    itemCount: pagedSituations.length,
                     separatorBuilder: (_, _) => const SizedBox(height: 10),
                     itemBuilder: (context, index) {
-                      final situation = visibleSituations[index];
+                      final situation = pagedSituations[index];
                       return _LessonCard(
                         situation: situation,
                         index: index,
@@ -248,6 +276,13 @@ class _SituationListViewState extends State<SituationListView> {
                       );
                     },
                   ),
+          ),
+          const SizedBox(height: 8),
+          AdminPagination(
+            page: _page,
+            totalPages: _totalPages,
+            onPrevious: _page > 1 ? () => setState(() => _page--) : null,
+            onNext: _page < _totalPages ? () => setState(() => _page++) : null,
           ),
         ],
       ),
