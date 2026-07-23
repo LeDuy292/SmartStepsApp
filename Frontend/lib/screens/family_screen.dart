@@ -2,12 +2,15 @@
 import 'package:flutter/material.dart';
 
 import '../services/family_service.dart';
+import '../services/auth_service.dart';
 import '../theme/duo_theme.dart';
 import '../widgets/child_selection_dialog.dart';
 import 'parent_task_reward_screen.dart';
 
 class FamilyScreen extends StatefulWidget {
-  const FamilyScreen({super.key});
+  const FamilyScreen({super.key, this.onChildSelected});
+
+  final ValueChanged<Map<String, dynamic>?>? onChildSelected;
 
   @override
   State<FamilyScreen> createState() => _FamilyScreenState();
@@ -33,7 +36,9 @@ class _FamilyScreenState extends State<FamilyScreen> {
       actions: [
         TextButton.icon(
           onPressed: () async {
-            await ChildSelectionDialog.show(context);
+            final selected = await ChildSelectionDialog.show(context);
+            if (!mounted || selected == null) return;
+            widget.onChildSelected?.call(selected);
           },
           icon: const Icon(Icons.swap_horiz_rounded),
           label: const Text('Đổi / Chọn bé'),
@@ -368,12 +373,22 @@ class _ChildCard extends StatelessWidget {
                       icon: Icons.stars_rounded,
                       title: '⚡ Nhiệm vụ & Duyệt quà thưởng',
                       subtitle: 'Giao việc nhà, bài tập & duyệt quà thưởng cho bé',
-                      onTap: () {
+                      onTap: () async {
+                        final parentId = await AuthService().getUserId();
+                        if (!context.mounted) return;
+                        if (parentId == null) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Không xác định được tài khoản phụ huynh. Vui lòng đăng nhập lại.'),
+                            ),
+                          );
+                          return;
+                        }
                         Navigator.push(
                           context,
                           MaterialPageRoute(
                             builder: (context) => ParentTaskRewardScreen(
-                              parentId: 1,
+                              parentId: parentId,
                               childId: id,
                             ),
                           ),

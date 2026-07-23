@@ -41,9 +41,20 @@ class _RewardsScreenState extends State<RewardsScreen> {
     _loadRewards();
   }
 
+  @override
+  void didUpdateWidget(covariant RewardsScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.childId != widget.childId) {
+      _loadRewards();
+    }
+    if (oldWidget.currentPoints != widget.currentPoints) {
+      _points = widget.currentPoints;
+    }
+  }
+
   Future<void> _loadRewards() async {
     setState(() => _isLoading = true);
-    final list = await _service.getRewards();
+    final list = await _service.getRewards(childId: widget.childId);
     if (mounted) {
       setState(() {
         _rewards = list;

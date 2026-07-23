@@ -7,10 +7,13 @@ import 'app_feedback_dialog.dart';
 import 'family_screen.dart';
 
 class ParentChildrenPage extends StatelessWidget {
-  const ParentChildrenPage({super.key});
+  const ParentChildrenPage({super.key, this.onChildSelected});
+
+  final ValueChanged<Map<String, dynamic>?>? onChildSelected;
 
   @override
-  Widget build(BuildContext context) => const FamilyScreen();
+  Widget build(BuildContext context) =>
+      FamilyScreen(onChildSelected: onChildSelected);
 }
 
 class ParentProgressPage extends StatefulWidget {
@@ -84,6 +87,12 @@ class _ProgressCard extends StatelessWidget {
       child: FutureBuilder<Map<String, dynamic>>(
         future: service.getReport(childId),
         builder: (context, snapshot) {
+          if (snapshot.hasError) {
+            return Padding(
+              padding: const EdgeInsets.all(20),
+              child: Text('Không tải được tiến độ: ${snapshot.error}'),
+            );
+          }
           if (!snapshot.hasData) {
             return const Padding(
               padding: EdgeInsets.all(20),
@@ -104,6 +113,7 @@ class _ProgressCard extends StatelessWidget {
           final aiAssessment = data['aiAssessment'] is Map
               ? Map<String, dynamic>.from(data['aiAssessment'] as Map)
               : null;
+          final aiGenerationMessage = data['aiGenerationMessage']?.toString();
           return Padding(
             padding: const EdgeInsets.all(20),
             child: Column(
@@ -135,7 +145,10 @@ class _ProgressCard extends StatelessWidget {
                 const SizedBox(height: 20),
                 _WeeklyOverview(week: week),
                 const SizedBox(height: 22),
-                _AiAssessmentCard(data: aiAssessment),
+                _AiAssessmentCard(
+                  data: aiAssessment,
+                  emptyMessage: aiGenerationMessage,
+                ),
                 const SizedBox(height: 14),
                 _SectionCard(
                   title: 'Nhịp học trong tuần',
@@ -261,8 +274,7 @@ class _WeeklyOverview extends StatelessWidget {
                     children: [
                       for (var index = 0; index < items.length; index++) ...[
                         items[index],
-                        if (index < items.length - 1)
-                          const SizedBox(height: 8),
+                        if (index < items.length - 1) const SizedBox(height: 8),
                       ],
                     ],
                   ),
@@ -405,8 +417,9 @@ class _SectionCard extends StatelessWidget {
 }
 
 class _AiAssessmentCard extends StatelessWidget {
-  const _AiAssessmentCard({required this.data});
+  const _AiAssessmentCard({required this.data, this.emptyMessage});
   final Map<String, dynamic>? data;
+  final String? emptyMessage;
 
   @override
   Widget build(BuildContext context) => Container(
@@ -438,14 +451,26 @@ class _AiAssessmentCard extends StatelessWidget {
         ),
         const SizedBox(height: 12),
         if (data == null)
-          const Text(
-            'Chưa có báo cáo AI. Hệ thống sẽ đánh giá khi trẻ có đủ dữ liệu học tập.',
-            style: TextStyle(color: DuoColors.textSecondary, height: 1.4),
+          Text(
+            emptyMessage ??
+                'Chưa có báo cáo AI. Hệ thống sẽ đánh giá khi trẻ có đủ dữ liệu học tập.',
+            style: const TextStyle(color: DuoColors.textSecondary, height: 1.4),
           )
         else ...[
           Text(
             data!['summary']?.toString() ?? 'Đã có đánh giá mới cho trẻ.',
             style: const TextStyle(height: 1.45),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            data!['analysisStatus'] == 'Succeeded'
+                ? 'Nguồn: ${data!['narrativeSource'] ?? 'DeepSeek AI'}'
+                : 'Nguồn: Phân tích hệ thống dự phòng',
+            style: const TextStyle(
+              color: DuoColors.textSecondary,
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+            ),
           ),
           const SizedBox(height: 12),
           _AiInsight(
@@ -718,7 +743,10 @@ class _ParentAccountPageState extends State<ParentAccountPage> {
     appBar: AppBar(
       title: const Text('Tài khoản phụ huynh'),
       actions: [
-        IconButton(onPressed: () => setState(_reload), icon: const Icon(Icons.refresh_rounded)),
+        IconButton(
+          onPressed: () => setState(_reload),
+          icon: const Icon(Icons.refresh_rounded),
+        ),
       ],
     ),
     body: FutureBuilder<Map<String, dynamic>>(
@@ -744,7 +772,9 @@ class _ParentAccountPageState extends State<ParentAccountPage> {
                           snapshot.data?['fullName']?.toString() ?? 'Phụ huynh',
                           style: Theme.of(context).textTheme.titleLarge,
                         ),
-                        Text(snapshot.data?['email']?.toString() ?? 'Đang tải...'),
+                        Text(
+                          snapshot.data?['email']?.toString() ?? 'Đang tải...',
+                        ),
                       ],
                     ),
                   ),
@@ -757,10 +787,14 @@ class _ParentAccountPageState extends State<ParentAccountPage> {
             children: [
               Expanded(
                 child: OutlinedButton.icon(
-                  onPressed: snapshot.hasData ? () => _editAccount(snapshot.data!) : null,
+                  onPressed: snapshot.hasData
+                      ? () => _editAccount(snapshot.data!)
+                      : null,
                   icon: const Icon(Icons.edit_rounded),
                   label: const Text('Sửa thông tin'),
-                  style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(50)),
+                  style: OutlinedButton.styleFrom(
+                    minimumSize: const Size.fromHeight(50),
+                  ),
                 ),
               ),
               const SizedBox(width: 10),
@@ -769,7 +803,9 @@ class _ParentAccountPageState extends State<ParentAccountPage> {
                   onPressed: _changePassword,
                   icon: const Icon(Icons.password_rounded),
                   label: const Text('Đổi mật khẩu'),
-                  style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(50)),
+                  style: OutlinedButton.styleFrom(
+                    minimumSize: const Size.fromHeight(50),
+                  ),
                 ),
               ),
             ],
@@ -798,7 +834,8 @@ class _ParentAccountPageState extends State<ParentAccountPage> {
             icon: Icons.notifications_rounded,
             child: FutureBuilder<List<Map<String, dynamic>>>(
               future: _notifications,
-              builder: (context, snapshot) => _NotificationList(items: snapshot.data),
+              builder: (context, snapshot) =>
+                  _NotificationList(items: snapshot.data),
             ),
           ),
           const SizedBox(height: 12),
@@ -807,7 +844,8 @@ class _ParentAccountPageState extends State<ParentAccountPage> {
             icon: Icons.history_rounded,
             child: FutureBuilder<List<Map<String, dynamic>>>(
               future: _feedback,
-              builder: (context, snapshot) => _FeedbackHistory(items: snapshot.data),
+              builder: (context, snapshot) =>
+                  _FeedbackHistory(items: snapshot.data),
             ),
           ),
           const SizedBox(height: 12),
@@ -825,17 +863,35 @@ class _ParentAccountPageState extends State<ParentAccountPage> {
   );
 
   Future<void> _editAccount(Map<String, dynamic> account) async {
-    final name = await _prompt('Sửa thông tin', 'Họ tên', account['fullName']?.toString());
+    final name = await _prompt(
+      'Sửa thông tin',
+      'Họ tên',
+      account['fullName']?.toString(),
+    );
     if (name == null || !mounted) return;
-    final email = await _prompt('Sửa thông tin', 'Email', account['email']?.toString());
+    final email = await _prompt(
+      'Sửa thông tin',
+      'Email',
+      account['email']?.toString(),
+    );
     if (email == null) return;
     await _run(() => _service.updateAccount(name, email));
   }
 
   Future<void> _changePassword() async {
-    final current = await _prompt('Đổi mật khẩu', 'Mật khẩu hiện tại', null, obscure: true);
+    final current = await _prompt(
+      'Đổi mật khẩu',
+      'Mật khẩu hiện tại',
+      null,
+      obscure: true,
+    );
     if (current == null || !mounted) return;
-    final next = await _prompt('Đổi mật khẩu', 'Mật khẩu mới (ít nhất 8 ký tự)', null, obscure: true);
+    final next = await _prompt(
+      'Đổi mật khẩu',
+      'Mật khẩu mới (ít nhất 8 ký tự)',
+      null,
+      obscure: true,
+    );
     if (next == null) return;
     await _run(() => _service.changePassword(current, next));
   }
@@ -845,22 +901,43 @@ class _ParentAccountPageState extends State<ParentAccountPage> {
       await action();
       if (!mounted) return;
       setState(_reload);
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Đã cập nhật thành công.')));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Đã cập nhật thành công.')));
     } catch (error) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$error')));
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('$error')));
+      }
     }
   }
 
-  Future<String?> _prompt(String title, String label, String? initial, {bool obscure = false}) async {
+  Future<String?> _prompt(
+    String title,
+    String label,
+    String? initial, {
+    bool obscure = false,
+  }) async {
     final controller = TextEditingController(text: initial);
     final result = await showDialog<String>(
       context: context,
       builder: (context) => AlertDialog(
         title: Text(title),
-        content: TextField(controller: controller, obscureText: obscure, decoration: InputDecoration(labelText: label)),
+        content: TextField(
+          controller: controller,
+          obscureText: obscure,
+          decoration: InputDecoration(labelText: label),
+        ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Hủy')),
-          FilledButton(onPressed: () => Navigator.pop(context, controller.text.trim()), child: const Text('Lưu')),
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Hủy'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, controller.text.trim()),
+            child: const Text('Lưu'),
+          ),
         ],
       ),
     );
@@ -870,7 +947,11 @@ class _ParentAccountPageState extends State<ParentAccountPage> {
 }
 
 class _AccountSection extends StatelessWidget {
-  const _AccountSection({required this.title, required this.icon, required this.child});
+  const _AccountSection({
+    required this.title,
+    required this.icon,
+    required this.child,
+  });
   final String title;
   final IconData icon;
   final Widget child;
@@ -879,11 +960,20 @@ class _AccountSection extends StatelessWidget {
   Widget build(BuildContext context) => Card(
     child: Padding(
       padding: const EdgeInsets.all(16),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Row(children: [Icon(icon), const SizedBox(width: 8), Text(title, style: Theme.of(context).textTheme.titleMedium)]),
-        const SizedBox(height: 12),
-        child,
-      ]),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon),
+              const SizedBox(width: 8),
+              Text(title, style: Theme.of(context).textTheme.titleMedium),
+            ],
+          ),
+          const SizedBox(height: 12),
+          child,
+        ],
+      ),
     ),
   );
 }
@@ -897,12 +987,15 @@ class _NotificationList extends StatelessWidget {
     if (items == null) return const LinearProgressIndicator();
     if (items!.isEmpty) return const Text('Chưa có thông báo mới.');
     return Column(
-      children: [for (final item in items!.take(8)) ListTile(
-        contentPadding: EdgeInsets.zero,
-        leading: const Icon(Icons.notifications_none_rounded),
-        title: Text(item['title']?.toString() ?? 'Thông báo'),
-        subtitle: Text(item['message']?.toString() ?? ''),
-      )],
+      children: [
+        for (final item in items!.take(8))
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: const Icon(Icons.notifications_none_rounded),
+            title: Text(item['title']?.toString() ?? 'Thông báo'),
+            subtitle: Text(item['message']?.toString() ?? ''),
+          ),
+      ],
     );
   }
 }
@@ -916,14 +1009,26 @@ class _FeedbackHistory extends StatelessWidget {
     if (items == null) return const LinearProgressIndicator();
     if (items!.isEmpty) return const Text('Bạn chưa gửi phản hồi nào.');
     return Column(
-      children: [for (final item in items!) ListTile(
-        contentPadding: EdgeInsets.zero,
-        leading: Text('${item['experienceRating'] ?? 0}★', style: const TextStyle(fontWeight: FontWeight.bold)),
-        title: Text(item['improvementNote']?.toString().isNotEmpty == true ? item['improvementNote'].toString() : 'Không có nội dung'),
-        subtitle: Text(item['adminResponse']?.toString().isNotEmpty == true
-            ? 'Admin: ${item['adminResponse']}'
-            : 'Trạng thái: ${item['status'] ?? 'New'}'),
-      )],
+      children: [
+        for (final item in items!)
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: Text(
+              '${item['experienceRating'] ?? 0}★',
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+            title: Text(
+              item['improvementNote']?.toString().isNotEmpty == true
+                  ? item['improvementNote'].toString()
+                  : 'Không có nội dung',
+            ),
+            subtitle: Text(
+              item['adminResponse']?.toString().isNotEmpty == true
+                  ? 'Admin: ${item['adminResponse']}'
+                  : 'Trạng thái: ${item['status'] ?? 'New'}',
+            ),
+          ),
+      ],
     );
   }
 }

@@ -432,7 +432,7 @@ class _ParentTaskRewardScreenState extends State<ParentTaskRewardScreen> {
     final nav = Navigator.of(context);
     final messenger = ScaffoldMessenger.of(context);
 
-    await _taskService.createReward(
+    final created = await _taskService.createReward(
       parentId: widget.parentId,
       title: preset.title,
       description: preset.description,
@@ -441,7 +441,7 @@ class _ParentTaskRewardScreenState extends State<ParentTaskRewardScreen> {
       iconUrl: preset.icon,
     );
 
-    if (mounted) {
+    if (mounted && created != null) {
       nav.pop();
       _loadData();
       messenger.showSnackBar(
@@ -451,6 +451,10 @@ class _ParentTaskRewardScreenState extends State<ParentTaskRewardScreen> {
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
+      );
+    } else if (mounted) {
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Không thể tạo phần thưởng. Vui lòng thử lại.')),
       );
     }
   }
@@ -495,7 +499,7 @@ class _ParentTaskRewardScreenState extends State<ParentTaskRewardScreen> {
     final messenger = ScaffoldMessenger.of(context);
     final cost = int.tryParse(_rewardCostController.text) ?? 50;
 
-    await _taskService.createReward(
+    final created = await _taskService.createReward(
       parentId: widget.parentId,
       title: _rewardTitleController.text.trim(),
       description: _rewardDescController.text.trim(),
@@ -504,7 +508,7 @@ class _ParentTaskRewardScreenState extends State<ParentTaskRewardScreen> {
       iconUrl: _rewardIconUrlController.text.trim().isNotEmpty ? _rewardIconUrlController.text.trim() : '🎁',
     );
 
-    if (mounted) {
+    if (mounted && created != null) {
       _rewardTitleController.clear();
       _rewardDescController.clear();
       _rewardCostController.text = '50';
@@ -518,6 +522,10 @@ class _ParentTaskRewardScreenState extends State<ParentTaskRewardScreen> {
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
+      );
+    } else if (mounted) {
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Không thể tạo phần thưởng. Vui lòng thử lại.')),
       );
     }
   }

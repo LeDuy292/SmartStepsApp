@@ -10,7 +10,7 @@ public sealed class DeepSeekOptions
 
     public string Model { get; set; } = "deepseek-v4-flash";
 
-    public int TimeoutSeconds { get; set; } = 30;
+    public int TimeoutSeconds { get; set; } = 8;
 
     public int MaxOutputTokens { get; set; } = 1200;
 }

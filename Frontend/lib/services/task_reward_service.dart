@@ -150,10 +150,14 @@ class TaskRewardService {
   }
 
   // --- Reward APIs ---
-  Future<List<RewardItemModel>> getRewards({int? parentId}) async {
+  Future<List<RewardItemModel>> getRewards({int? parentId, int? childId}) async {
     try {
+      final query = <String, String>{
+        if (parentId != null) 'parentId': parentId.toString(),
+        if (childId != null) 'childId': childId.toString(),
+      };
       final response = await http.get(
-        _uri('/api/rewards', parentId != null ? {'parentId': parentId.toString()} : null),
+        _uri('/api/rewards', query.isEmpty ? null : query),
         headers: await _headers(),
       );
 

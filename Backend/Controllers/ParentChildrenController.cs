@@ -329,7 +329,15 @@ public sealed class ParentChildrenController(SmartStepsDbContext dbContext) : Co
             .Select(item => new
             {
                 item.Summary, item.Strengths, item.AreasForImprovement,
-                item.ParentAdvice, item.GeneratedAt
+                item.ParentAdvice, item.GeneratedAt,
+                NarrativeSource = item.AIAnalysisLogs
+                    .OrderByDescending(log => log.CreatedAt)
+                    .Select(log => log.ModelName)
+                    .FirstOrDefault(),
+                AnalysisStatus = item.AIAnalysisLogs
+                    .OrderByDescending(log => log.CreatedAt)
+                    .Select(log => log.Status)
+                    .FirstOrDefault()
             })
             .FirstOrDefaultAsync(cancellationToken);
 

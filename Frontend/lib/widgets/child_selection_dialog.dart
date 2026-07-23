@@ -293,7 +293,6 @@ class _ChildSelectionDialogState extends State<ChildSelectionDialog> {
                               final child = children[index];
                               final name =
                                   child['fullName']?.toString() ?? 'Bé';
-                              final email = child['email']?.toString() ?? '';
 
                               return InkWell(
                                 onTap: () => _selectChild(child),
@@ -337,15 +336,6 @@ class _ChildSelectionDialogState extends State<ChildSelectionDialog> {
                                                 color: DuoColors.textPrimary,
                                               ),
                                             ),
-                                            if (email.isNotEmpty)
-                                              Text(
-                                                email,
-                                                style: const TextStyle(
-                                                  fontSize: 13,
-                                                  color:
-                                                      DuoColors.textSecondary,
-                                                ),
-                                              ),
                                           ],
                                         ),
                                       ),

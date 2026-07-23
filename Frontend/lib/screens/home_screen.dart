@@ -801,7 +801,9 @@ class _SmartStepsCatalogPageState extends State<SmartStepsCatalogPage>
   bool _isFeedbackPromptOpen = false;
   late final Future<String?> _roleFuture;
   String? _userRole;
+  int? _activeChildId;
   bool _inParentWorkspace = false;
+  bool _startupSelectionComplete = false;
 
   bool get _isParent => _userRole == 'Parent';
 
@@ -828,31 +830,49 @@ class _SmartStepsCatalogPageState extends State<SmartStepsCatalogPage>
 
   Future<void> _loadRole() async {
     final role = await _roleFuture;
-    if (mounted) setState(() => _userRole = role);
+    final userId = await AuthService().getUserId();
+    if (mounted) {
+      setState(() {
+        _userRole = role;
+        if (role == 'Child') {
+          _activeChildId = userId;
+          _startupSelectionComplete = true;
+        } else if (role != 'Parent') {
+          _startupSelectionComplete = true;
+        }
+      });
+    }
   }
 
   Future<void> _showStartupPrompts() async {
-    await _roleFuture;
-    if (_isParent) {
+    final role = await _roleFuture;
+    if (!mounted) {
+      return;
+    }
+    if (role == 'Parent') {
       final selected = await ChildSelectionDialog.show(
         context,
         profileStorage: widget.profileStorage,
-        canDismiss: true,
+        canDismiss: false,
       );
       if (selected?['mode'] == 'parent_workspace' && mounted) {
         setState(() {
           _inParentWorkspace = true;
           _selectedTabIndex = 0;
+          _startupSelectionComplete = true;
         });
       } else if (mounted) {
         setState(() {
           _inParentWorkspace = false;
+          _activeChildId =
+              (selected?['userId'] ?? selected?['id']) as int?;
+          _startupSelectionComplete = true;
         });
         await _loadProfile();
       }
     }
 
-    if (_isParent && widget.showPremiumOffer) {
+    if (role == 'Parent' && widget.showPremiumOffer) {
       await _showPremiumOfferIfNeeded();
     }
 
@@ -1290,7 +1310,7 @@ class _SmartStepsCatalogPageState extends State<SmartStepsCatalogPage>
 
   @override
   Widget build(BuildContext context) {
-    if (_userRole == null) {
+    if (_userRole == null || !_startupSelectionComplete) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
     final selectedIsland = _selectedIslandId == null
@@ -1318,7 +1338,21 @@ class _SmartStepsCatalogPageState extends State<SmartStepsCatalogPage>
         index: _selectedTabIndex,
         children: (_isParent && _inParentWorkspace)
             ? [
-                const ParentChildrenPage(),
+                ParentChildrenPage(
+                  onChildSelected: (selected) {
+                    if (selected == null ||
+                        selected['mode'] == 'parent_workspace') {
+                      return;
+                    }
+                    setState(() {
+                      _inParentWorkspace = false;
+                      _activeChildId =
+                          (selected['userId'] ?? selected['id']) as int?;
+                      _selectedTabIndex = 0;
+                    });
+                    unawaited(_loadProfile());
+                  },
+                ),
                 const ParentProgressPage(),
                 ParentAccountPage(
                   profileStorage: widget.profileStorage,
@@ -1356,14 +1390,14 @@ class _SmartStepsCatalogPageState extends State<SmartStepsCatalogPage>
                         },
                       ),
                 TasksScreen(
-                  childId: 1,
+                  childId: _activeChildId ?? 0,
                   currentPoints: (_profile?.totalSkillPoints ?? 0) > 0 ? _profile!.totalSkillPoints : 1250,
                   onPointsChanged: (pts) {
                     setState(() {});
                   },
                 ),
                 RewardsScreen(
-                  childId: 1,
+                  childId: _activeChildId ?? 0,
                   currentPoints: (_profile?.totalSkillPoints ?? 0) > 0 ? _profile!.totalSkillPoints : 1250,
                   onPointsChanged: (pts) {
                     setState(() {});
@@ -1382,6 +1416,8 @@ class _SmartStepsCatalogPageState extends State<SmartStepsCatalogPage>
                     } else if (selected != null) {
                       setState(() {
                         _inParentWorkspace = false;
+                        _activeChildId =
+                            (selected['userId'] ?? selected['id']) as int?;
                       });
                       unawaited(_loadProfile());
                     }

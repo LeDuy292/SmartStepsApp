@@ -120,75 +120,102 @@ class _TasksScreenState extends State<TasksScreen> {
   Widget _buildTopAppBar() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Row(
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final compact = constraints.maxWidth < 440;
+          final identity = _buildHeaderIdentity();
+          final pointsBadge = _buildPointsBadge();
+
+          if (compact) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                identity,
+                const SizedBox(height: 12),
+                Align(alignment: Alignment.centerRight, child: pointsBadge),
+              ],
+            );
+          }
+
+          return Row(
             children: [
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  shape: BoxShape.circle,
-                  border: Border.all(color: const Color(0xFFFFC83D), width: 2.5),
-                  boxShadow: const [
-                    BoxShadow(
-                      color: Color(0xFF785A00),
-                      offset: Offset(0, 3),
-                    ),
-                  ],
-                ),
-                child: const Center(
-                  child: Text('👦', style: TextStyle(fontSize: 26)),
+              Expanded(child: identity),
+              const SizedBox(width: 12),
+              pointsBadge,
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildHeaderIdentity() {
+    return Row(
+      children: [
+        Container(
+          width: 48,
+          height: 48,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            shape: BoxShape.circle,
+            border: Border.all(color: const Color(0xFFFFC83D), width: 2.5),
+            boxShadow: const [
+              BoxShadow(color: Color(0xFF785A00), offset: Offset(0, 3)),
+            ],
+          ),
+          child: const Center(
+            child: Text('👦', style: TextStyle(fontSize: 26)),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Nhiệm Vụ Siêu Anh Hùng ⚡',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontFamily: 'Plus Jakarta Sans',
+                  fontSize: 19,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF785A00),
                 ),
               ),
-              const SizedBox(width: 12),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Nhiệm Vụ Siêu Anh Hùng ⚡',
-                    style: TextStyle(
-                      fontFamily: 'Plus Jakarta Sans',
-                      fontSize: 19,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF785A00),
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    'Sẵn sàng tích lũy Xu thưởng cùng Bố Mẹ!',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey.shade700,
-                    ),
-                  ),
-                ],
+              const SizedBox(height: 2),
+              Text(
+                'Sẵn sàng tích lũy Xu thưởng cùng Bố Mẹ!',
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(fontSize: 12, color: Colors.grey.shade700),
               ),
             ],
           ),
-          // Stars Badge
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            decoration: BoxDecoration(
-              color: const Color(0xFFFFC83D),
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: const Color(0xFF201B12), width: 2),
-            ),
-            child: Row(
-              children: [
-                const Text('🪙', style: TextStyle(fontSize: 16)),
-                const SizedBox(width: 4),
-                Text(
-                  '$_points Xu',
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w900,
-                    fontSize: 13,
-                    color: Color(0xFF715400),
-                  ),
-                ),
-              ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPointsBadge() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFC83D),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFF201B12), width: 2),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Text('🪙', style: TextStyle(fontSize: 16)),
+          const SizedBox(width: 4),
+          Text(
+            '$_points Xu',
+            style: const TextStyle(
+              fontWeight: FontWeight.w900,
+              fontSize: 13,
+              color: Color(0xFF715400),
             ),
           ),
         ],

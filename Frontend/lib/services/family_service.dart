@@ -54,8 +54,37 @@ class FamilyService {
   Future<List<Map<String, dynamic>>> getProgress(int childId) async =>
       _getList('/api/family/children/$childId/progress');
 
-  Future<Map<String, dynamic>> getReport(int childId) async =>
-      _getMap('/api/family/children/$childId/report');
+  Future<Map<String, dynamic>> getReport(
+    int childId, {
+    bool generateAiIfMissing = true,
+  }) async {
+    final report = await _getMap('/api/family/children/$childId/report');
+    if (!generateAiIfMissing || report['aiAssessment'] != null) {
+      return report;
+    }
+
+    try {
+      final generation = await _postMap(
+        '/api/learning-analysis/$childId/reports',
+        const {},
+      );
+      if (generation['hasEnoughData'] == true) {
+        return _getMap('/api/family/children/$childId/report');
+      }
+
+      return {
+        ...report,
+        'aiGenerationMessage':
+            generation['message']?.toString() ??
+            'Chưa có đủ dữ liệu để tạo đánh giá AI.',
+      };
+    } on FamilyServiceException catch (error) {
+      return {
+        ...report,
+        'aiGenerationMessage': 'Không thể tạo đánh giá AI: ${error.message}',
+      };
+    }
+  }
 
   Future<List<Map<String, dynamic>>> getPendingActivities(int childId) async =>
       _getList('/api/family/children/$childId/activities/pending');
@@ -88,7 +117,6 @@ class FamilyService {
     'note': note,
   });
 
-
   Future<List<Map<String, dynamic>>> _getList(String path) async {
     final response = await http.get(_uri(path), headers: await _headers());
     _ensureSuccess(response);
@@ -110,6 +138,19 @@ class FamilyService {
       body: jsonEncode(body),
     );
     _ensureSuccess(response);
+  }
+
+  Future<Map<String, dynamic>> _postMap(
+    String path,
+    Map<String, dynamic> body,
+  ) async {
+    final response = await http.post(
+      _uri(path),
+      headers: await _headers(json: true),
+      body: jsonEncode(body),
+    );
+    _ensureSuccess(response);
+    return jsonDecode(response.body) as Map<String, dynamic>;
   }
 
   Future<void> _put(String path, Map<String, dynamic> body) async {

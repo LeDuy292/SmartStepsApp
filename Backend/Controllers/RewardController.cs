@@ -13,8 +13,20 @@ namespace SmartStepsServer.Controllers;
 public sealed class RewardController(SmartStepsDbContext dbContext) : ControllerBase
 {
     [HttpGet]
-    public async Task<IActionResult> GetRewards([FromQuery] int? parentId, CancellationToken cancellationToken)
+    public async Task<IActionResult> GetRewards(
+        [FromQuery] int? parentId,
+        [FromQuery] int? childId,
+        CancellationToken cancellationToken)
     {
+        if (childId.HasValue)
+        {
+            parentId = await dbContext.Users
+                .AsNoTracking()
+                .Where(u => u.UserId == childId.Value && u.Role == "Child")
+                .Select(u => u.ParentId)
+                .FirstOrDefaultAsync(cancellationToken);
+        }
+
         var rewards = await dbContext.RewardItems
             .AsNoTracking()
             .Where(r => r.IsActive && (r.ParentId == null || r.ParentId == parentId))
