@@ -63,19 +63,34 @@ class AdminDashboardData {
 
 class AdminFeedback {
   const AdminFeedback({
+    required this.feedbackId,
     required this.email,
+    required this.source,
     required this.experienceRating,
+    required this.childEngagementRating,
+    required this.effectivenessRating,
+    required this.ageFit,
     required this.note,
     required this.submittedAt,
   });
   factory AdminFeedback.fromJson(Map<String, dynamic> json) => AdminFeedback(
+    feedbackId: _int(json['feedbackId'] ?? json['FeedbackId']),
     email: json['email']?.toString() ?? '',
+    source: json['source']?.toString() ?? '',
     experienceRating: _int(json['experienceRating']),
+    childEngagementRating: _int(json['childEngagementRating']),
+    effectivenessRating: _int(json['effectivenessRating']),
+    ageFit: json['ageFit']?.toString() ?? '',
     note: json['improvementNote']?.toString() ?? '',
     submittedAt: DateTime.tryParse(json['submittedAt']?.toString() ?? ''),
   );
+  final int feedbackId;
   final String email;
+  final String source;
   final int experienceRating;
+  final int childEngagementRating;
+  final int effectivenessRating;
+  final String ageFit;
   final String note;
   final DateTime? submittedAt;
 }

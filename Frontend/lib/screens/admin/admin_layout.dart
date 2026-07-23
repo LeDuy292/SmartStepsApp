@@ -9,6 +9,7 @@ import 'content/island_list_view.dart';
 import 'content/situation_list_view.dart';
 import 'content/skill_list_view.dart';
 import 'dashboard/admin_dashboard_view.dart';
+import 'feedback_list_view.dart';
 import 'users/user_list_view.dart';
 
 class AdminLayout extends StatefulWidget {
@@ -26,9 +27,10 @@ class _AdminLayoutState extends State<AdminLayout> {
 
     return switch (_selectedIndex) {
       0 => AdminDashboardView(onLogout: onLogout),
-      1 => UserListView(onLogout: onLogout),
-      2 => IslandListView(onLogout: onLogout),
-      3 => SituationListView(onLogout: onLogout),
+      1 => FeedbackListView(onLogout: onLogout),
+      2 => UserListView(onLogout: onLogout),
+      3 => IslandListView(onLogout: onLogout),
+      4 => SituationListView(onLogout: onLogout),
       _ => SkillListView(onLogout: onLogout),
     };
   }
@@ -77,6 +79,11 @@ class _AdminLayoutState extends State<AdminLayout> {
                   icon: Icon(Icons.dashboard_outlined),
                   selectedIcon: Icon(Icons.dashboard_rounded),
                   label: 'Tổng quan',
+                ),
+                NavigationDestination(
+                  icon: Icon(Icons.rate_review_outlined),
+                  selectedIcon: Icon(Icons.rate_review_rounded),
+                  label: 'Phản hồi',
                 ),
                 NavigationDestination(
                   icon: Icon(Icons.people_outline_rounded),
@@ -164,6 +171,11 @@ class _AdminLayoutState extends State<AdminLayout> {
                     icon: Icon(Icons.dashboard_outlined),
                     selectedIcon: Icon(Icons.dashboard_rounded),
                     label: Text('Tổng quan'),
+                  ),
+                  NavigationRailDestination(
+                    icon: Icon(Icons.rate_review_outlined),
+                    selectedIcon: Icon(Icons.rate_review_rounded),
+                    label: Text('Phản hồi'),
                   ),
                   NavigationRailDestination(
                     icon: Icon(Icons.people_outline_rounded),
