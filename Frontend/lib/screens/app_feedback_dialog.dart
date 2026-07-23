@@ -36,9 +36,6 @@ class AppFeedbackDialog extends StatefulWidget {
 class _AppFeedbackDialogState extends State<AppFeedbackDialog> {
   final TextEditingController _improvementController = TextEditingController();
   int _experienceRating = 4;
-  int _childEngagementRating = 4;
-  int _effectivenessRating = 4;
-  String _ageFit = 'Phù hợp';
   bool _isSubmitting = false;
 
   @override
@@ -62,9 +59,9 @@ class _AppFeedbackDialogState extends State<AppFeedbackDialog> {
       source: widget.source,
       submittedAt: submittedAt,
       experienceRating: _experienceRating,
-      childEngagementRating: _childEngagementRating,
-      effectivenessRating: _effectivenessRating,
-      ageFit: _ageFit,
+      childEngagementRating: _experienceRating,
+      effectivenessRating: _experienceRating,
+      ageFit: '',
       improvementNote: _improvementController.text.trim(),
     );
 
@@ -143,57 +140,20 @@ class _AppFeedbackDialogState extends State<AppFeedbackDialog> {
                 style: Theme.of(context).textTheme.bodyMedium,
               ),
               const SizedBox(height: 16),
-              _RatingQuestion(
-                label: 'Phụ huynh thấy app dễ dùng không?',
+              _StarRating(
                 value: _experienceRating,
                 onChanged: (value) {
                   setState(() => _experienceRating = value);
                 },
               ),
-              const SizedBox(height: 14),
-              _RatingQuestion(
-                label: 'Bé có hào hứng khi học không?',
-                value: _childEngagementRating,
-                onChanged: (value) {
-                  setState(() => _childEngagementRating = value);
-                },
-              ),
-              const SizedBox(height: 14),
-              _RatingQuestion(
-                label: 'Bé có nhớ kỹ năng an toàn sau bài học không?',
-                value: _effectivenessRating,
-                onChanged: (value) {
-                  setState(() => _effectivenessRating = value);
-                },
-              ),
-              const SizedBox(height: 14),
-              Text(
-                'Nội dung có phù hợp độ tuổi của bé không?',
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
-              const SizedBox(height: 9),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  for (final option in _ageFitOptions)
-                    ChoiceChip(
-                      label: Text(option),
-                      selected: _ageFit == option,
-                      onSelected: (_) {
-                        setState(() => _ageFit = option);
-                      },
-                    ),
-                ],
-              ),
-              const SizedBox(height: 14),
+              const SizedBox(height: 18),
               TextField(
                 controller: _improvementController,
                 maxLines: 3,
                 textInputAction: TextInputAction.done,
                 decoration: InputDecoration(
-                  labelText: 'Một điều muốn cải thiện',
-                  hintText: 'Ví dụ: thêm giọng đọc, thêm bài, nút rõ hơn...',
+                  labelText: 'Nội dung đánh giá',
+                  hintText: 'Chia sẻ trải nghiệm của bạn về SmartSteps...',
                   filled: true,
                   fillColor: DuoColors.background,
                   border: OutlineInputBorder(
@@ -255,14 +215,9 @@ class _AppFeedbackDialogState extends State<AppFeedbackDialog> {
   }
 }
 
-class _RatingQuestion extends StatelessWidget {
-  const _RatingQuestion({
-    required this.label,
-    required this.value,
-    required this.onChanged,
-  });
+class _StarRating extends StatelessWidget {
+  const _StarRating({required this.value, required this.onChanged});
 
-  final String label;
   final int value;
   final ValueChanged<int> onChanged;
 
@@ -271,68 +226,31 @@ class _RatingQuestion extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: Theme.of(context).textTheme.titleMedium),
-        const SizedBox(height: 9),
+        Text('Đánh giá của bạn', style: Theme.of(context).textTheme.titleMedium),
+        const SizedBox(height: 10),
         Row(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            for (var rating = 1; rating <= 5; rating++) ...[
-              Expanded(
-                child: _RatingChip(
-                  rating: rating,
-                  isSelected: rating == value,
-                  onTap: () => onChanged(rating),
+            for (var rating = 1; rating <= 5; rating++)
+              IconButton(
+                tooltip: '$rating sao',
+                onPressed: () => onChanged(rating),
+                iconSize: 40,
+                color: DuoColors.primaryYellow,
+                icon: Icon(
+                  rating <= value ? Icons.star_rounded : Icons.star_border_rounded,
                 ),
               ),
-              if (rating != 5) const SizedBox(width: 6),
-            ],
           ],
+        ),
+        const SizedBox(height: 4),
+        Center(
+          child: Text(
+            '$value/5 sao',
+            style: Theme.of(context).textTheme.titleSmall,
+          ),
         ),
       ],
     );
   }
 }
-
-class _RatingChip extends StatelessWidget {
-  const _RatingChip({
-    required this.rating,
-    required this.isSelected,
-    required this.onTap,
-  });
-
-  final int rating;
-  final bool isSelected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: isSelected ? DuoColors.primaryYellow : DuoColors.background,
-      borderRadius: BorderRadius.circular(16),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(16),
-        onTap: onTap,
-        child: Container(
-          height: 42,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: isSelected ? DuoColors.darkYellow : DuoColors.border,
-              width: 2,
-            ),
-          ),
-          child: Text(
-            '$rating',
-            style: const TextStyle(
-              color: DuoColors.textPrimary,
-              fontSize: 16,
-              fontWeight: FontWeight.w900,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-const _ageFitOptions = ['Phù hợp', 'Cần dễ hơn', 'Cần khó hơn'];

@@ -25,8 +25,22 @@ public sealed class AppFeedback
     [MaxLength(2000)]
     public string ImprovementNote { get; set; } = string.Empty;
 
+    [MaxLength(30)]
+    public string Category { get; set; } = "Suggestion";
+
+    [MaxLength(20)]
+    public string Status { get; set; } = "New";
+
+    public int? SituationId { get; set; }
+
+    [MaxLength(2000)]
+    public string AdminResponse { get; set; } = string.Empty;
+
     public DateTime SubmittedAt { get; set; }
     public DateTime CreatedAt { get; set; }
+    public DateTime? UpdatedAt { get; set; }
+    public DateTime? ResolvedAt { get; set; }
 
     public User User { get; set; } = null!;
+    public Situation? Situation { get; set; }
 }

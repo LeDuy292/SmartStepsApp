@@ -12,6 +12,21 @@ namespace SmartStepsServer.Controllers;
 [Route("api/feedback")]
 public sealed class FeedbackController(SmartStepsDbContext dbContext) : ControllerBase
 {
+    [HttpGet]
+    public async Task<IActionResult> GetMine(CancellationToken cancellationToken)
+    {
+        if (!int.TryParse(User.FindFirstValue("UserId") ?? User.FindFirstValue(ClaimTypes.NameIdentifier), out var userId))
+            return Forbid();
+        return Ok(await dbContext.AppFeedbackEntries.AsNoTracking()
+            .Where(item => item.UserId == userId)
+            .OrderByDescending(item => item.SubmittedAt)
+            .Select(item => new
+            {
+                item.FeedbackId, item.ExperienceRating, item.ImprovementNote,
+                item.Status, item.AdminResponse, item.SubmittedAt, item.ResolvedAt
+            }).ToListAsync(cancellationToken));
+    }
+
     [HttpPost]
     public async Task<IActionResult> Create(FeedbackRequest request, CancellationToken cancellationToken)
     {
@@ -20,6 +35,12 @@ public sealed class FeedbackController(SmartStepsDbContext dbContext) : Controll
         if (request.ExperienceRating is < 1 or > 5 || request.ChildEngagementRating is < 1 or > 5 ||
             request.EffectivenessRating is < 1 or > 5 || string.IsNullOrWhiteSpace(request.ClientId))
             return BadRequest(new { message = "Ratings must be between 1 and 5 and clientId is required." });
+        var category = NormalizeCategory(request.Category);
+        if (category is null)
+            return BadRequest(new { message = "Category must be Bug, Suggestion or InappropriateContent." });
+        if (request.SituationId is not null && !await dbContext.Situations.AnyAsync(
+                item => item.SituationId == request.SituationId, cancellationToken))
+            return BadRequest(new { message = "The reported lesson does not exist." });
 
         var exists = await dbContext.AppFeedbackEntries.AnyAsync(
             item => item.UserId == userId && item.ClientId == request.ClientId, cancellationToken);
@@ -34,14 +55,25 @@ public sealed class FeedbackController(SmartStepsDbContext dbContext) : Controll
             EffectivenessRating = request.EffectivenessRating,
             AgeFit = request.AgeFit?.Trim() ?? string.Empty,
             ImprovementNote = request.ImprovementNote?.Trim() ?? string.Empty,
+            Category = category,
+            Status = "New",
+            SituationId = request.SituationId,
             SubmittedAt = request.SubmittedAt?.ToUniversalTime() ?? DateTime.UtcNow,
             CreatedAt = DateTime.UtcNow,
         });
         await dbContext.SaveChangesAsync(cancellationToken);
         return NoContent();
     }
+
+    private static string? NormalizeCategory(string? category) => category?.Trim().ToLowerInvariant() switch
+    {
+        null or "" or "suggestion" => "Suggestion",
+        "bug" => "Bug",
+        "inappropriatecontent" or "inappropriate_content" => "InappropriateContent",
+        _ => null
+    };
 }
 
 public sealed record FeedbackRequest(string ClientId, string? Source, DateTime? SubmittedAt,
     int ExperienceRating, int ChildEngagementRating, int EffectivenessRating,
-    string? AgeFit, string? ImprovementNote);
+    string? AgeFit, string? ImprovementNote, string? Category = null, int? SituationId = null);

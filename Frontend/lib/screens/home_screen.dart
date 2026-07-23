@@ -26,8 +26,8 @@ import '../widgets/smartsteps_press_effect.dart';
 import '../services/auth_service.dart';
 import '../view_models/registration_view_model.dart';
 import 'app_feedback_dialog.dart';
-import 'learn_screen.dart';
 import 'login_screen.dart';
+import 'parent_workspace_pages.dart';
 import 'profile_screen.dart';
 import 'quick_review_screen.dart';
 import 'register_screen.dart';
@@ -689,6 +689,7 @@ class _SmartStepsAppState extends State<SmartStepsApp> {
   }
 
   Future<void> _handleLoginAsync(NavigatorState navigator) async {
+    final role = await widget.authGateway.getUserRole();
     final hasProfile = await widget.profileStorage.hasProfile();
     if (!mounted) {
       return;
@@ -696,6 +697,7 @@ class _SmartStepsAppState extends State<SmartStepsApp> {
 
     final shouldShowOnboarding =
         widget.showInitialSurveyAfterLogin &&
+        role == 'Child' &&
         !_hasCompletedInitialSurvey &&
         !hasProfile;
     if (!shouldShowOnboarding) {
@@ -794,12 +796,18 @@ class _SmartStepsCatalogPageState extends State<SmartStepsCatalogPage>
   Set<int> _serverCompletedSituationIds = const {};
   Map<int, int> _serverCurrentSteps = const {};
   bool _isFeedbackPromptOpen = false;
+  late final Future<String?> _roleFuture;
+  String? _userRole;
+
+  bool get _isParent => _userRole == 'Parent';
 
   SituationService get _situationService => widget.situationService;
 
   @override
   void initState() {
     super.initState();
+    _roleFuture = AuthService().getUserRole();
+    unawaited(_loadRole());
     WidgetsBinding.instance.addObserver(this);
     unawaited(_enterCatalogViewingMode());
     unawaited(_loadProfileAndPaymentReturn());
@@ -814,8 +822,14 @@ class _SmartStepsCatalogPageState extends State<SmartStepsCatalogPage>
     });
   }
 
+  Future<void> _loadRole() async {
+    final role = await _roleFuture;
+    if (mounted) setState(() => _userRole = role);
+  }
+
   Future<void> _showStartupPrompts() async {
-    if (widget.showPremiumOffer) {
+    await _roleFuture;
+    if (_isParent && widget.showPremiumOffer) {
       await _showPremiumOfferIfNeeded();
     }
 
@@ -912,7 +926,11 @@ class _SmartStepsCatalogPageState extends State<SmartStepsCatalogPage>
   }
 
   Future<void> _loadProfileAndPaymentReturn() async {
-    await _loadProfile();
+    await _roleFuture;
+    if (!_isParent) {
+      await _loadProfile();
+      return;
+    }
     if (!kIsWeb || !mounted) return;
 
     final query = Uri.base.queryParameters;
@@ -938,17 +956,21 @@ class _SmartStepsCatalogPageState extends State<SmartStepsCatalogPage>
       }
 
       final current = await widget.profileStorage.readProfile();
-      if (current == null || !mounted) return;
-      final profile = current.copyWith(
-        isPremium: true,
-        premiumCode: status.planCode,
-        premiumActivatedAt: DateTime.now(),
-      );
-      await widget.profileStorage.saveProfile(profile);
+      if (current != null) {
+        final profile = current.copyWith(
+          isPremium: true,
+          premiumCode: status.planCode,
+          premiumActivatedAt: DateTime.now(),
+        );
+        await widget.profileStorage.saveProfile(profile);
+        if (!mounted) return;
+        setState(() => _profile = profile);
+      }
       if (!mounted) return;
-      setState(() => _profile = profile);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Thanh toán thành công. Đã mở khóa Premium!')),
+        const SnackBar(
+          content: Text('Thanh toán thành công. Đã mở khóa Premium!'),
+        ),
       );
     } catch (error) {
       if (!mounted) return;
@@ -959,6 +981,7 @@ class _SmartStepsCatalogPageState extends State<SmartStepsCatalogPage>
   }
 
   Future<void> _showPremiumOfferIfNeeded() async {
+    if (!_isParent) return;
     final profile = _profile ?? await widget.profileStorage.readProfile();
     if (!mounted || (profile?.isPremium ?? false)) {
       return;
@@ -968,19 +991,7 @@ class _SmartStepsCatalogPageState extends State<SmartStepsCatalogPage>
   }
 
   Future<void> _showPremiumOffer() async {
-    // 1. Hiển thị popup toán học bảo vệ trước
-    final isParent = await showDialog<bool>(
-      context: context,
-      barrierDismissible: false, // Bắt buộc phải nhập hoặc bấm hủy
-      builder: (_) => const _ParentalGateDialog(),
-    );
-
-    // 2. Nếu trả lời sai hoặc bấm Hủy thì dừng lại, không hiện form nhập mã
-    if (isParent != true) {
-      return;
-    }
-
-    if (!mounted) return;
+    if (!_isParent || !mounted) return;
 
     // 3. Nếu đúng, tiếp tục hiển thị popup Premium Offer ban đầu
     return showDialog<void>(
@@ -1004,11 +1015,13 @@ class _SmartStepsCatalogPageState extends State<SmartStepsCatalogPage>
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
-          '${summary.title} cần Premium. Nhập mã PREMIUM để mở khóa.',
+          _isParent
+              ? '${summary.title} cần Premium.'
+              : '${summary.title} cần Premium. Hãy nhờ phụ huynh nâng cấp.',
         ),
       ),
     );
-    unawaited(_showPremiumOffer());
+    if (_isParent) unawaited(_showPremiumOffer());
   }
 
   Future<void> _enterCatalogViewingMode() async {
@@ -1254,6 +1267,9 @@ class _SmartStepsCatalogPageState extends State<SmartStepsCatalogPage>
 
   @override
   Widget build(BuildContext context) {
+    if (_userRole == null) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
     final selectedIsland = _selectedIslandId == null
         ? null
         : _islandById(_islands, _selectedIslandId!);
@@ -1277,53 +1293,55 @@ class _SmartStepsCatalogPageState extends State<SmartStepsCatalogPage>
     return Scaffold(
       body: IndexedStack(
         index: _selectedTabIndex,
-        children: [
-          selectedIsland == null
-              ? _IslandHomeMapTab(
-                  profile: _profile,
-                  audioController: SmartStepsAudioScope.maybeOf(context),
-                  islands: _islands,
-                  isLoading: _isLoadingCatalog && _islands.isEmpty,
-                  error: _catalogError,
-                  onSelected: _selectIsland,
-                )
-              : _IslandLessonMapTab(
-                  island: selectedIsland,
-                  situations: selectedSituations,
-                  isLoadingSituations: _isLoadingIslandSituations,
-                  isPremium: _profile?.isPremium ?? false,
-                  activeLessonId: _activeLesson?.id,
-                  loadingSituationId: _loadingSituationId,
-                  hasActiveLesson: _activeLesson != null,
-                  canStartLesson: canStartLesson,
-                  completedSituationIds: completedSituationIds,
-                  onBack: _showIslands,
-                  onLocked: _showPremiumRequired,
-                  onSelected: (summary) {
-                    unawaited(_selectSituation(summary));
-                  },
-                  onStartLesson: () {
-                    unawaited(_openLesson());
-                  },
+        children: _isParent
+            ? [
+                const ParentChildrenPage(),
+                const ParentProgressPage(),
+                ParentAccountPage(
+                  profileStorage: widget.profileStorage,
+                  onManagePremium: () => unawaited(_showPremiumOffer()),
+                  onLogout: () => widget.onLogout(context),
                 ),
-          ParentReportPage(
-            situationService: _situationService,
-            profileStorage: widget.profileStorage,
-            isActive: _selectedTabIndex == 1,
-            onStartLesson: (situationId, islandId) {
-              unawaited(_startSuggestedLesson(situationId, islandId));
-            },
-            learningGateway: widget.learningGateway,
-          ),
-          const _PracticeTabPage(),
-          ProfileScreen(
-            profileStorage: widget.profileStorage,
-            onLogout: widget.onLogout,
-          ),
-        ],
+              ]
+            : [
+                selectedIsland == null
+                    ? _IslandHomeMapTab(
+                        profile: _profile,
+                        audioController: SmartStepsAudioScope.maybeOf(context),
+                        islands: _islands,
+                        isLoading: _isLoadingCatalog && _islands.isEmpty,
+                        error: _catalogError,
+                        onSelected: _selectIsland,
+                      )
+                    : _IslandLessonMapTab(
+                        island: selectedIsland,
+                        situations: selectedSituations,
+                        isLoadingSituations: _isLoadingIslandSituations,
+                        isPremium: _profile?.isPremium ?? false,
+                        activeLessonId: _activeLesson?.id,
+                        loadingSituationId: _loadingSituationId,
+                        hasActiveLesson: _activeLesson != null,
+                        canStartLesson: canStartLesson,
+                        completedSituationIds: completedSituationIds,
+                        onBack: _showIslands,
+                        onLocked: _showPremiumRequired,
+                        onSelected: (summary) {
+                          unawaited(_selectSituation(summary));
+                        },
+                        onStartLesson: () {
+                          unawaited(_openLesson());
+                        },
+                      ),
+                const _PracticeTabPage(),
+                ProfileScreen(
+                  profileStorage: widget.profileStorage,
+                  onLogout: widget.onLogout,
+                ),
+              ],
       ),
       bottomNavigationBar: _SmartStepsBottomNavigation(
         currentIndex: _selectedTabIndex,
+        isParent: _isParent,
         onSelected: (index) {
           setState(() {
             _selectedTabIndex = index;
@@ -1331,38 +1349,6 @@ class _SmartStepsCatalogPageState extends State<SmartStepsCatalogPage>
         },
       ),
     );
-  }
-
-  Future<void> _startSuggestedLesson(int situationId, int islandId) async {
-    final island = _islandById(_islands, islandId);
-    if (island != null) {
-      _selectIsland(island);
-    }
-
-    setState(() {
-      _selectedTabIndex = 0;
-      _loadingSituationId = situationId;
-    });
-
-    try {
-      final detail = await _situationService.getSituationDetail(situationId);
-      final lesson = _lessonFromSituation(detail);
-      if (!mounted) return;
-
-      setState(() {
-        _activeLesson = lesson;
-      });
-
-      await _openLesson();
-    } catch (error) {
-      debugPrint('Failed to start suggested lesson: $error');
-    } finally {
-      if (mounted) {
-        setState(() {
-          _loadingSituationId = null;
-        });
-      }
-    }
   }
 
   Future<void> _showIslandCompletionDialog(
@@ -1751,73 +1737,6 @@ class _PremiumOfferDialogState extends State<_PremiumOfferDialog> {
     super.dispose();
   }
 
-  Future<void> _activatePremium() async {
-    if (_isSubmitting || _showSuccess) {
-      return;
-    }
-
-    setState(() {
-      _isSubmitting = true;
-      _errorText = null;
-    });
-
-    // 1. Loading effect for 1 second
-    await Future<void>.delayed(const Duration(milliseconds: 1000));
-    if (!mounted) {
-      return;
-    }
-
-    try {
-      // Redeem on the authenticated account first, then refresh local UI state.
-      final status = await PremiumService().redeemCode('PREMIUM');
-      if (!status.hasPremium) {
-        throw const PremiumServiceException('Máy chủ chưa kích hoạt Premium.');
-      }
-      final current = await widget.profileStorage.readProfile();
-      if (current == null) {
-        throw const PremiumServiceException('Bạn cần hoàn tất hồ sơ trước.');
-      }
-      final profile = current.copyWith(
-        isPremium: true,
-        premiumCode: status.planCode ?? 'PREMIUM',
-        premiumActivatedAt: DateTime.now(),
-      );
-      await widget.profileStorage.saveProfile(profile);
-      if (!mounted) {
-        return;
-      }
-
-      // Notify parent to rebuild workspace and unlock premium features
-      widget.onPremiumActivated(profile);
-
-      // 3. Show success pop-up
-      setState(() {
-        _isSubmitting = false;
-        _showSuccess = true;
-      });
-    } on PremiumServiceException catch (error) {
-      if (!mounted) {
-        return;
-      }
-
-      setState(() {
-        _errorText = error.message;
-        _isSubmitting = false;
-      });
-    } catch (error, stackTrace) {
-      debugPrint('SmartSteps premium activation failed: $error');
-      debugPrintStack(stackTrace: stackTrace);
-      if (!mounted) {
-        return;
-      }
-
-      setState(() {
-        _errorText = 'Chưa nâng cấp được Premium. Vui lòng thử lại.';
-        _isSubmitting = false;
-      });
-    }
-  }
-
   Future<void> _purchasePremium() async {
     if (_isSubmitting || _showSuccess) return;
     setState(() {
@@ -2023,39 +1942,6 @@ class _PremiumOfferDialogState extends State<_PremiumOfferDialog> {
           ),
         ],
         const SizedBox(height: 24),
-        SmartStepsPressEffect(
-          enabled: !_isSubmitting,
-          child: FilledButton.icon(
-            key: const ValueKey('premium-code-submit-button'),
-            onPressed: _isSubmitting ? null : _activatePremium,
-            icon: const Icon(
-              Icons.workspace_premium_rounded,
-              color: Color(0xFFFF7A1A),
-              size: 24,
-            ),
-            label: _isSubmitting
-                ? const SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2.6,
-                      color: Colors.black,
-                    ),
-                  )
-                : const Text('Kích hoạt Premium'),
-            style: FilledButton.styleFrom(
-              elevation: 0,
-              backgroundColor: const Color(0xFFFFE99C),
-              foregroundColor: Colors.black,
-              minimumSize: const Size(double.infinity, 56),
-              textStyle: const TextStyle(
-                fontSize: 19,
-                fontWeight: FontWeight.w900,
-              ),
-            ),
-          ),
-        ),
-        const SizedBox(height: 10),
         OutlinedButton.icon(
           onPressed: _isSubmitting
               ? null
@@ -2184,10 +2070,12 @@ class _SmartStepsBottomNavigation extends StatelessWidget {
   const _SmartStepsBottomNavigation({
     required this.currentIndex,
     required this.onSelected,
+    required this.isParent,
   });
 
   final int currentIndex;
   final ValueChanged<int> onSelected;
+  final bool isParent;
 
   @override
   Widget build(BuildContext context) {
@@ -2216,34 +2104,38 @@ class _SmartStepsBottomNavigation extends StatelessWidget {
             children: [
               _SmartStepsBottomNavigationItem(
                 key: const ValueKey('home-tab-button'),
-                icon: Icons.home_rounded,
-                label: 'Trang chủ',
+                icon: isParent
+                    ? Icons.family_restroom_rounded
+                    : Icons.home_rounded,
+                label: isParent ? 'Trẻ em' : 'Trang chủ',
                 isSelected: currentIndex == 0,
                 onTap: () => onSelected(0),
               ),
-              _SmartStepsBottomNavigationItem(
-                key: const ValueKey('learn-tab-button'),
-                icon: Icons.map_rounded,
-                label: 'Tiến bộ',
-                isSelected: currentIndex == 1,
-                onTap: () {
-                  onSelected(1);
-                  AnalyticsService.trackEvent('view_progress_tab');
-                },
-              ),
-              _SmartStepsBottomNavigationItem(
-                key: const ValueKey('practice-tab-button'),
-                icon: Icons.bolt_rounded,
-                label: 'Luyện tập',
-                isSelected: currentIndex == 2,
-                onTap: () => onSelected(2),
-              ),
+              if (isParent)
+                _SmartStepsBottomNavigationItem(
+                  key: const ValueKey('learn-tab-button'),
+                  icon: Icons.map_rounded,
+                  label: 'Tiến bộ',
+                  isSelected: currentIndex == 1,
+                  onTap: () {
+                    onSelected(1);
+                    AnalyticsService.trackEvent('view_progress_tab');
+                  },
+                ),
+              if (!isParent)
+                _SmartStepsBottomNavigationItem(
+                  key: const ValueKey('practice-tab-button'),
+                  icon: Icons.bolt_rounded,
+                  label: 'Luyện tập',
+                  isSelected: currentIndex == 1,
+                  onTap: () => onSelected(1),
+                ),
               _SmartStepsBottomNavigationItem(
                 key: const ValueKey('profile-tab-button'),
-                icon: Icons.face_rounded,
-                label: 'Bé',
-                isSelected: currentIndex == 3,
-                onTap: () => onSelected(3),
+                icon: isParent ? Icons.person_rounded : Icons.face_rounded,
+                label: isParent ? 'Tài khoản' : 'Bé',
+                isSelected: currentIndex == 2,
+                onTap: () => onSelected(2),
               ),
             ],
           ),

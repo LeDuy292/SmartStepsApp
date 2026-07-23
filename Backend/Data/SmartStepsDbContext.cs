@@ -30,6 +30,9 @@ public class SmartStepsDbContext : DbContext
     public DbSet<SkillAssessment> SkillAssessments { get; set; } = null!;
     public DbSet<AIAnalysisLog> AIAnalysisLogs { get; set; } = null!;
     public DbSet<AppFeedback> AppFeedbackEntries { get; set; } = null!;
+    public DbSet<ChildLinkCode> ChildLinkCodes { get; set; } = null!;
+    public DbSet<LessonAssignment> LessonAssignments { get; set; } = null!;
+    public DbSet<ParentActivityConfirmation> ParentActivityConfirmations { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -80,6 +83,8 @@ public class SmartStepsDbContext : DbContext
                 table.HasCheckConstraint("CK_AppFeedback_ExperienceRating", "\"ExperienceRating\" BETWEEN 1 AND 5");
                 table.HasCheckConstraint("CK_AppFeedback_ChildEngagementRating", "\"ChildEngagementRating\" BETWEEN 1 AND 5");
                 table.HasCheckConstraint("CK_AppFeedback_EffectivenessRating", "\"EffectivenessRating\" BETWEEN 1 AND 5");
+                table.HasCheckConstraint("CK_AppFeedback_Category", "\"Category\" IN ('Bug', 'Suggestion', 'InappropriateContent')");
+                table.HasCheckConstraint("CK_AppFeedback_Status", "\"Status\" IN ('New', 'Processing', 'Resolved')");
             });
             entity.HasKey(e => e.FeedbackId);
             entity.HasIndex(e => new { e.UserId, e.ClientId }).IsUnique();
@@ -87,10 +92,46 @@ public class SmartStepsDbContext : DbContext
             entity.Property(e => e.Source).HasMaxLength(50).IsRequired();
             entity.Property(e => e.AgeFit).HasMaxLength(50).IsRequired();
             entity.Property(e => e.ImprovementNote).HasMaxLength(2000).IsRequired();
+            entity.Property(e => e.Category).HasMaxLength(30).IsRequired();
+            entity.Property(e => e.Status).HasMaxLength(20).IsRequired();
+            entity.Property(e => e.AdminResponse).HasMaxLength(2000).IsRequired();
             entity.HasOne(e => e.User)
                 .WithMany(e => e.AppFeedbackEntries)
                 .HasForeignKey(e => e.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(e => e.Situation)
+                .WithMany()
+                .HasForeignKey(e => e.SituationId)
+                .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<ChildLinkCode>(entity =>
+        {
+            entity.HasIndex(e => e.Code).IsUnique();
+            entity.Property(e => e.Code).HasMaxLength(12).IsRequired();
+            entity.HasOne(e => e.Child).WithMany().HasForeignKey(e => e.ChildId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(e => e.UsedByParent).WithMany().HasForeignKey(e => e.UsedByParentId).OnDelete(DeleteBehavior.NoAction);
+        });
+
+        modelBuilder.Entity<LessonAssignment>(entity =>
+        {
+            entity.ToTable("LessonAssignment", table =>
+                table.HasCheckConstraint("CK_LessonAssignment_Status", "\"Status\" IN ('Assigned', 'InProgress', 'Completed', 'Cancelled')"));
+            entity.Property(e => e.Status).HasMaxLength(20).IsRequired();
+            entity.Property(e => e.Note).HasMaxLength(500).IsRequired();
+            entity.HasIndex(e => new { e.ChildId, e.Status });
+            entity.HasOne(e => e.Parent).WithMany().HasForeignKey(e => e.ParentId).OnDelete(DeleteBehavior.NoAction);
+            entity.HasOne(e => e.Child).WithMany().HasForeignKey(e => e.ChildId).OnDelete(DeleteBehavior.NoAction);
+            entity.HasOne(e => e.Situation).WithMany().HasForeignKey(e => e.SituationId).OnDelete(DeleteBehavior.NoAction);
+        });
+
+        modelBuilder.Entity<ParentActivityConfirmation>(entity =>
+        {
+            entity.Property(e => e.Note).HasMaxLength(1000).IsRequired();
+            entity.HasIndex(e => new { e.ParentId, e.ChildId, e.SituationId });
+            entity.HasOne(e => e.Parent).WithMany().HasForeignKey(e => e.ParentId).OnDelete(DeleteBehavior.NoAction);
+            entity.HasOne(e => e.Child).WithMany().HasForeignKey(e => e.ChildId).OnDelete(DeleteBehavior.NoAction);
+            entity.HasOne(e => e.Situation).WithMany().HasForeignKey(e => e.SituationId).OnDelete(DeleteBehavior.NoAction);
         });
 
         // Configure Island
@@ -288,7 +329,7 @@ public class SmartStepsDbContext : DbContext
             {
                 table.HasCheckConstraint(
                     "CK_PremiumPayment_Status",
-                    "\"Status\" IN ('Pending', 'Paid', 'Cancelled', 'Expired', 'Failed')");
+                    "\"Status\" IN ('Pending', 'Paid', 'Cancelled', 'Expired', 'Failed', 'Refunded')");
                 table.HasCheckConstraint("CK_PremiumPayment_Amount", "\"Amount\" >= 0");
             });
 

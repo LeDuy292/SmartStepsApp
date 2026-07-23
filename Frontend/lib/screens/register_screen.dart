@@ -40,7 +40,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
         RegistrationViewModel(profileStorage: widget.profileStorage);
     _nameController = TextEditingController(text: _viewModel.draft.childName);
     _emailController = TextEditingController(text: _viewModel.draft.email);
-    _passwordController = TextEditingController(text: _viewModel.draft.password);
+    _passwordController = TextEditingController(
+      text: _viewModel.draft.password,
+    );
   }
 
   @override
@@ -142,6 +144,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
         onNameChanged: _viewModel.updateName,
         onEmailChanged: _viewModel.updateEmail,
         onPasswordChanged: _viewModel.updatePassword,
+        selectedRole: _viewModel.draft.role,
+        onRoleChanged: _viewModel.updateRole,
         isSurveyOnly: _viewModel.isSurveyOnly,
       ),
       RegistrationStep.age => RegistrationAgeStep(

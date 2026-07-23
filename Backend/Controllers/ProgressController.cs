@@ -50,6 +50,7 @@ public sealed class ProgressController : ControllerBase
             {
                 item.SituationId,
                 item.IslandId,
+                item.OrderIndex,
                 FirstStepId = item.SituationSteps
                     .OrderBy(step => step.OrderIndex)
                     .Select(step => step.StepId)
@@ -65,6 +66,24 @@ public sealed class ProgressController : ControllerBase
         if (situation.FirstStepId <= 0)
         {
             return BadRequest(new { message = "Situation does not have any steps." });
+        }
+
+        var requiresPremium = (situation.IslandId == 2 || situation.IslandId == 3) && situation.OrderIndex >= 2;
+        if (requiresPremium)
+        {
+            var now = DateTime.UtcNow;
+            var hasPremium = await _dbContext.Users.AsNoTracking()
+                .Where(item => item.Email == normalizedEmail)
+                .AnyAsync(item =>
+                    item.PremiumSubscriptions.Any(subscription =>
+                        subscription.Status == "Active" &&
+                        (subscription.ExpiresAt == null || subscription.ExpiresAt > now)) ||
+                    (item.ParentId != null && item.Parent!.PremiumSubscriptions.Any(subscription =>
+                        subscription.Status == "Active" &&
+                        (subscription.ExpiresAt == null || subscription.ExpiresAt > now))),
+                    cancellationToken);
+            if (!hasPremium)
+                return StatusCode(StatusCodes.Status403Forbidden, new { message = "Bài học này yêu cầu Premium." });
         }
 
         var user = await FindOrCreateUserAsync(normalizedEmail, request.FullName, cancellationToken);
@@ -392,6 +411,20 @@ public sealed class ProgressController : ControllerBase
             progress.Status = "Completed";
             progress.LastAccessedAt = utcNow;
             progress.UpdatedAt = utcNow;
+        }
+
+        var assignments = await _dbContext.LessonAssignments
+            .Where(item =>
+                item.ChildId == user.UserId &&
+                item.SituationId == request.SituationId &&
+                item.Status != "Completed" &&
+                item.Status != "Cancelled")
+            .ToListAsync(cancellationToken);
+        foreach (var assignment in assignments)
+        {
+            assignment.Status = "Completed";
+            assignment.CompletedAt = utcNow;
+            assignment.UpdatedAt = utcNow;
         }
 
         await _dbContext.SaveChangesAsync(cancellationToken);
