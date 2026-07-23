@@ -13,6 +13,55 @@ namespace SmartStepsServer.Controllers;
 [Route("api/family")]
 public sealed class ParentChildrenController(SmartStepsDbContext dbContext) : ControllerBase
 {
+    [HttpGet("account")]
+    [Authorize(Roles = "Parent")]
+    public async Task<IActionResult> GetAccount(CancellationToken cancellationToken)
+    {
+        if (!TryGetUserId(out var parentId)) return Forbid();
+        var account = await dbContext.Users.AsNoTracking()
+            .Where(item => item.UserId == parentId)
+            .Select(item => new { item.UserId, item.FullName, item.Email, item.Status })
+            .SingleOrDefaultAsync(cancellationToken);
+        return account is null ? NotFound() : Ok(account);
+    }
+
+    [HttpPut("account")]
+    [Authorize(Roles = "Parent")]
+    public async Task<IActionResult> UpdateAccount(UpdateAccountRequest request, CancellationToken cancellationToken)
+    {
+        if (!TryGetUserId(out var parentId)) return Forbid();
+        var fullName = request.FullName?.Trim() ?? string.Empty;
+        var email = request.Email?.Trim().ToLowerInvariant() ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(fullName) || string.IsNullOrWhiteSpace(email))
+            return BadRequest(new { message = "Họ tên và email là bắt buộc." });
+        if (await dbContext.Users.AnyAsync(item => item.Email == email && item.UserId != parentId, cancellationToken))
+            return Conflict(new { message = "Email đã được sử dụng." });
+        var parent = await dbContext.Users.SingleOrDefaultAsync(item => item.UserId == parentId, cancellationToken);
+        if (parent is null) return NotFound();
+        parent.FullName = fullName[..Math.Min(fullName.Length, 100)];
+        parent.Email = email;
+        parent.UpdatedAt = DateTime.UtcNow;
+        await dbContext.SaveChangesAsync(cancellationToken);
+        return Ok(new { parent.UserId, parent.FullName, parent.Email, parent.Status });
+    }
+
+    [HttpPost("account/change-password")]
+    [Authorize(Roles = "Parent")]
+    public async Task<IActionResult> ChangePassword(ChangePasswordRequest request, CancellationToken cancellationToken)
+    {
+        if (!TryGetUserId(out var parentId)) return Forbid();
+        if (request.NewPassword?.Length < 8)
+            return BadRequest(new { message = "Mật khẩu mới phải có ít nhất 8 ký tự." });
+        var parent = await dbContext.Users.SingleOrDefaultAsync(item => item.UserId == parentId, cancellationToken);
+        if (parent is null) return NotFound();
+        if (!BCrypt.Net.BCrypt.Verify(request.CurrentPassword ?? string.Empty, parent.Password))
+            return BadRequest(new { message = "Mật khẩu hiện tại không đúng." });
+        parent.Password = BCrypt.Net.BCrypt.HashPassword(request.NewPassword!);
+        parent.UpdatedAt = DateTime.UtcNow;
+        await dbContext.SaveChangesAsync(cancellationToken);
+        return NoContent();
+    }
+
     [HttpPost("link-codes")]
     [Authorize(Roles = "Child")]
     public async Task<IActionResult> CreateLinkCode(CancellationToken cancellationToken)
@@ -102,6 +151,89 @@ public sealed class ParentChildrenController(SmartStepsDbContext dbContext) : Co
             .Select(item => new { item.UserId, item.FullName, item.Email, item.Status, item.ProfileJson })
             .ToListAsync(cancellationToken);
         return Ok(children);
+    }
+
+    [HttpPut("children/{childId:int}")]
+    [Authorize(Roles = "Parent")]
+    public async Task<IActionResult> UpdateChild(int childId, UpdateChildRequest request, CancellationToken cancellationToken)
+    {
+        if (!await CanManageChild(childId, cancellationToken)) return Forbid();
+        var fullName = request.FullName?.Trim() ?? string.Empty;
+        var email = request.Email?.Trim().ToLowerInvariant() ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(fullName) || string.IsNullOrWhiteSpace(email))
+            return BadRequest(new { message = "Họ tên và email là bắt buộc." });
+        if (await dbContext.Users.AnyAsync(item => item.Email == email && item.UserId != childId, cancellationToken))
+            return Conflict(new { message = "Email đã được sử dụng." });
+        var child = await dbContext.Users.SingleAsync(item => item.UserId == childId, cancellationToken);
+        child.FullName = fullName[..Math.Min(fullName.Length, 100)];
+        child.Email = email;
+        child.UpdatedAt = DateTime.UtcNow;
+        await dbContext.SaveChangesAsync(cancellationToken);
+        return Ok(new { child.UserId, child.FullName, child.Email, child.Status });
+    }
+
+    [HttpPost("children/{childId:int}/reset-password")]
+    [Authorize(Roles = "Parent")]
+    public async Task<IActionResult> ResetChildPassword(int childId, ResetChildPasswordRequest request, CancellationToken cancellationToken)
+    {
+        if (!await CanManageChild(childId, cancellationToken)) return Forbid();
+        if (request.NewPassword?.Length < 8)
+            return BadRequest(new { message = "Mật khẩu mới phải có ít nhất 8 ký tự." });
+        var child = await dbContext.Users.SingleAsync(item => item.UserId == childId, cancellationToken);
+        child.Password = BCrypt.Net.BCrypt.HashPassword(request.NewPassword!);
+        child.UpdatedAt = DateTime.UtcNow;
+        await dbContext.SaveChangesAsync(cancellationToken);
+        return NoContent();
+    }
+
+    [HttpPatch("children/{childId:int}/status")]
+    [Authorize(Roles = "Parent")]
+    public async Task<IActionResult> SetChildStatus(int childId, SetChildStatusRequest request, CancellationToken cancellationToken)
+    {
+        if (!await CanManageChild(childId, cancellationToken)) return Forbid();
+        var status = request.Status?.Trim() switch { "Active" => "Active", "Locked" => "Locked", _ => null };
+        if (status is null) return BadRequest(new { message = "Trạng thái phải là Active hoặc Locked." });
+        var child = await dbContext.Users.SingleAsync(item => item.UserId == childId, cancellationToken);
+        child.Status = status;
+        child.UpdatedAt = DateTime.UtcNow;
+        await dbContext.SaveChangesAsync(cancellationToken);
+        return Ok(new { child.UserId, child.Status });
+    }
+
+    [HttpDelete("children/{childId:int}/link")]
+    [Authorize(Roles = "Parent")]
+    public async Task<IActionResult> UnlinkChild(int childId, CancellationToken cancellationToken)
+    {
+        if (!await CanManageChild(childId, cancellationToken)) return Forbid();
+        var child = await dbContext.Users.SingleAsync(item => item.UserId == childId, cancellationToken);
+        child.ParentId = null;
+        child.UpdatedAt = DateTime.UtcNow;
+        await dbContext.SaveChangesAsync(cancellationToken);
+        return NoContent();
+    }
+
+    [HttpGet("notifications")]
+    [Authorize(Roles = "Parent")]
+    public async Task<IActionResult> GetNotifications(CancellationToken cancellationToken)
+    {
+        if (!TryGetUserId(out var parentId)) return Forbid();
+        var childIds = dbContext.Users.Where(item => item.ParentId == parentId).Select(item => item.UserId);
+        var completed = await dbContext.UserProgresses.AsNoTracking()
+            .Where(item => childIds.Contains(item.UserId) && item.Status == "Completed")
+            .OrderByDescending(item => item.UpdatedAt ?? item.LastAccessedAt ?? item.CreatedAt).Take(20)
+            .Select(item => new { Id = $"progress-{item.ProgressId}", Type = "LessonCompleted", Title = "Trẻ đã hoàn thành bài học", Message = item.User.FullName + " đã hoàn thành " + item.Situation.Title, CreatedAt = item.UpdatedAt ?? item.LastAccessedAt ?? item.CreatedAt })
+            .ToListAsync(cancellationToken);
+        var overdue = await dbContext.LessonAssignments.AsNoTracking()
+            .Where(item => item.ParentId == parentId && item.Status != "Completed" && item.Status != "Cancelled" && item.DueAt < DateTime.UtcNow)
+            .OrderByDescending(item => item.DueAt).Take(20)
+            .Select(item => new { Id = $"assignment-{item.AssignmentId}", Type = "AssignmentOverdue", Title = "Bài học đã quá hạn", Message = item.Child.FullName + " chưa hoàn thành " + item.Situation.Title, CreatedAt = item.DueAt!.Value })
+            .ToListAsync(cancellationToken);
+        var responses = await dbContext.AppFeedbackEntries.AsNoTracking()
+            .Where(item => item.UserId == parentId && item.AdminResponse != "")
+            .OrderByDescending(item => item.UpdatedAt).Take(20)
+            .Select(item => new { Id = $"feedback-{item.FeedbackId}", Type = "FeedbackResponse", Title = "Phản hồi từ quản trị viên", Message = item.AdminResponse, CreatedAt = item.UpdatedAt ?? item.CreatedAt })
+            .ToListAsync(cancellationToken);
+        return Ok(completed.Cast<object>().Concat(overdue).Concat(responses).OrderByDescending(item => ((dynamic)item).CreatedAt).Take(30));
     }
 
     [HttpGet("children/{childId:int}/overview")]
@@ -334,3 +466,8 @@ public sealed class ParentChildrenController(SmartStepsDbContext dbContext) : Co
 public sealed record LinkChildRequest(string? Code);
 public sealed record CreateChildRequest(string FullName, string Email, string Password);
 public sealed record ActivityConfirmationRequest(int SituationId, string? Note);
+public sealed record UpdateAccountRequest(string? FullName, string? Email);
+public sealed record ChangePasswordRequest(string? CurrentPassword, string? NewPassword);
+public sealed record UpdateChildRequest(string? FullName, string? Email);
+public sealed record ResetChildPasswordRequest(string? NewPassword);
+public sealed record SetChildStatusRequest(string? Status);

@@ -1298,6 +1298,7 @@ class _SmartStepsCatalogPageState extends State<SmartStepsCatalogPage>
                 const ParentChildrenPage(),
                 const ParentProgressPage(),
                 ParentAccountPage(
+                  profileStorage: widget.profileStorage,
                   onManagePremium: () => unawaited(_showPremiumOffer()),
                   onLogout: () => widget.onLogout(context),
                 ),

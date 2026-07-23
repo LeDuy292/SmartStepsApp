@@ -12,6 +12,21 @@ namespace SmartStepsServer.Controllers;
 [Route("api/feedback")]
 public sealed class FeedbackController(SmartStepsDbContext dbContext) : ControllerBase
 {
+    [HttpGet]
+    public async Task<IActionResult> GetMine(CancellationToken cancellationToken)
+    {
+        if (!int.TryParse(User.FindFirstValue("UserId") ?? User.FindFirstValue(ClaimTypes.NameIdentifier), out var userId))
+            return Forbid();
+        return Ok(await dbContext.AppFeedbackEntries.AsNoTracking()
+            .Where(item => item.UserId == userId)
+            .OrderByDescending(item => item.SubmittedAt)
+            .Select(item => new
+            {
+                item.FeedbackId, item.ExperienceRating, item.ImprovementNote,
+                item.Status, item.AdminResponse, item.SubmittedAt, item.ResolvedAt
+            }).ToListAsync(cancellationToken));
+    }
+
     [HttpPost]
     public async Task<IActionResult> Create(FeedbackRequest request, CancellationToken cancellationToken)
     {

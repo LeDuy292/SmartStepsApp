@@ -69,6 +69,7 @@ class _FamilyScreenState extends State<FamilyScreen> {
               return _ChildCard(
                 child: children[index - 1],
                 familyService: _service,
+                onChanged: () => setState(_reload),
               );
             },
           ),
@@ -198,6 +199,7 @@ class _FamilyHero extends StatelessWidget {
           children: [
             FilledButton.icon(
               style: FilledButton.styleFrom(
+                fixedSize: const Size(190, 48),
                 backgroundColor: DuoColors.textPrimary,
                 foregroundColor: Colors.white,
               ),
@@ -207,6 +209,7 @@ class _FamilyHero extends StatelessWidget {
             ),
             OutlinedButton.icon(
               style: OutlinedButton.styleFrom(
+                fixedSize: const Size(190, 48),
                 foregroundColor: DuoColors.textPrimary,
                 side: const BorderSide(color: DuoColors.textPrimary),
               ),
@@ -279,9 +282,14 @@ class _EmptyFamily extends StatelessWidget {
 }
 
 class _ChildCard extends StatelessWidget {
-  const _ChildCard({required this.child, required this.familyService});
+  const _ChildCard({
+    required this.child,
+    required this.familyService,
+    required this.onChanged,
+  });
   final Map<String, dynamic> child;
   final FamilyService familyService;
+  final VoidCallback onChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -312,7 +320,23 @@ class _ChildCard extends StatelessWidget {
           ),
         ),
         title: Text(name, style: const TextStyle(fontWeight: FontWeight.w900)),
-        subtitle: Text(child['email']?.toString() ?? ''),
+        subtitle: Text(
+          '${child['email']?.toString() ?? ''} · ${child['status'] == 'Locked' ? 'Đã khóa' : 'Đang hoạt động'}',
+        ),
+        trailing: PopupMenuButton<String>(
+          tooltip: 'Quản lý tài khoản trẻ',
+          onSelected: (action) => _handleAccountAction(context, action),
+          itemBuilder: (_) => [
+            const PopupMenuItem(value: 'edit', child: Text('Sửa thông tin')),
+            const PopupMenuItem(value: 'password', child: Text('Đặt lại mật khẩu')),
+            PopupMenuItem(
+              value: 'status',
+              child: Text(child['status'] == 'Locked' ? 'Mở khóa tài khoản' : 'Khóa tài khoản'),
+            ),
+            const PopupMenuDivider(),
+            const PopupMenuItem(value: 'unlink', child: Text('Hủy liên kết')),
+          ],
+        ),
         children: [
           FutureBuilder<Map<String, dynamic>>(
             future: familyService.getOverview(id),
@@ -357,6 +381,73 @@ class _ChildCard extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  Future<void> _handleAccountAction(BuildContext context, String action) async {
+    final childId = child['userId'] as int;
+    try {
+      if (action == 'edit') {
+        final name = await _prompt(context, 'Sửa tên trẻ', 'Họ tên', child['fullName']?.toString());
+        if (name == null || !context.mounted) return;
+        final email = await _prompt(context, 'Sửa email trẻ', 'Email', child['email']?.toString());
+        if (email == null) return;
+        await familyService.updateChild(childId, name, email);
+      } else if (action == 'password') {
+        final password = await _prompt(context, 'Đặt lại mật khẩu', 'Mật khẩu mới (ít nhất 8 ký tự)', null, obscure: true);
+        if (password == null) return;
+        await familyService.resetChildPassword(childId, password);
+      } else if (action == 'status') {
+        await familyService.setChildStatus(
+          childId,
+          child['status'] == 'Locked' ? 'Active' : 'Locked',
+        );
+      } else if (action == 'unlink') {
+        final confirmed = await showDialog<bool>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Hủy liên kết trẻ?'),
+            content: const Text('Tài khoản trẻ và dữ liệu học tập vẫn được giữ lại.'),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Hủy')),
+              FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Hủy liên kết')),
+            ],
+          ),
+        );
+        if (confirmed != true) return;
+        await familyService.unlinkChild(childId);
+      }
+      onChanged();
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Đã cập nhật tài khoản trẻ.')));
+      }
+    } catch (error) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$error')));
+      }
+    }
+  }
+
+  Future<String?> _prompt(
+    BuildContext context,
+    String title,
+    String label,
+    String? initial, {
+    bool obscure = false,
+  }) async {
+    final controller = TextEditingController(text: initial);
+    final result = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(title),
+        content: TextField(controller: controller, obscureText: obscure, decoration: InputDecoration(labelText: label)),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Hủy')),
+          FilledButton(onPressed: () => Navigator.pop(context, controller.text.trim()), child: const Text('Lưu')),
+        ],
+      ),
+    );
+    controller.dispose();
+    return result == null || result.isEmpty ? null : result;
   }
 
   Future<void> _showActivitySheet(

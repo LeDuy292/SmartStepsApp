@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 
-import '../services/auth_service.dart';
 import '../services/family_service.dart';
+import '../services/local_profile_storage.dart';
 import '../theme/duo_theme.dart';
+import 'app_feedback_dialog.dart';
 import 'family_screen.dart';
 
 class ParentChildrenPage extends StatelessWidget {
@@ -249,23 +250,26 @@ class _WeeklyOverview extends StatelessWidget {
                 ],
               );
             }
-            return Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Expanded(flex: 4, child: accuracy),
-                const SizedBox(width: 12),
-                Expanded(
-                  flex: 6,
-                  child: Column(
-                    children: [
-                      for (var index = 0; index < items.length; index++) ...[
-                        items[index],
-                        if (index < items.length - 1) const SizedBox(height: 8),
+            return IntrinsicHeight(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Expanded(flex: 4, child: accuracy),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    flex: 6,
+                    child: Column(
+                      children: [
+                        for (var index = 0; index < items.length; index++) ...[
+                          items[index],
+                          if (index < items.length - 1)
+                            const SizedBox(height: 8),
+                        ],
                       ],
-                    ],
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             );
           },
         ),
@@ -662,22 +666,65 @@ class _HistoryList extends StatelessWidget {
   }
 }
 
-class ParentAccountPage extends StatelessWidget {
+class ParentAccountPage extends StatefulWidget {
   const ParentAccountPage({
     super.key,
+    required this.profileStorage,
     required this.onManagePremium,
     required this.onLogout,
   });
 
+  final LocalProfileStorage profileStorage;
   final VoidCallback onManagePremium;
   final VoidCallback onLogout;
 
   @override
+  State<ParentAccountPage> createState() => _ParentAccountPageState();
+}
+
+class _ParentAccountPageState extends State<ParentAccountPage> {
+  final _service = FamilyService();
+  late Future<Map<String, dynamic>> _account;
+  late Future<List<Map<String, dynamic>>> _feedback;
+  late Future<List<Map<String, dynamic>>> _notifications;
+
+  @override
+  void initState() {
+    super.initState();
+    _reload();
+  }
+
+  void _reload() {
+    _account = _service.getAccount();
+    _feedback = _service.getFeedbackHistory();
+    _notifications = _service.getNotifications();
+  }
+
+  Future<void> _showFeedback(BuildContext context) async {
+    final submitted = await showAppFeedbackDialog(
+      context,
+      profileStorage: widget.profileStorage,
+      source: 'parent_account',
+    );
+    if (submitted == true && context.mounted) {
+      setState(_reload);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Cảm ơn bạn đã gửi phản hồi!')),
+      );
+    }
+  }
+
+  @override
   Widget build(BuildContext context) => Scaffold(
     backgroundColor: DuoColors.background,
-    appBar: AppBar(title: const Text('Tài khoản phụ huynh')),
-    body: FutureBuilder<String?>(
-      future: AuthService().getUserEmail(),
+    appBar: AppBar(
+      title: const Text('Tài khoản phụ huynh'),
+      actions: [
+        IconButton(onPressed: () => setState(_reload), icon: const Icon(Icons.refresh_rounded)),
+      ],
+    ),
+    body: FutureBuilder<Map<String, dynamic>>(
+      future: _account,
       builder: (context, snapshot) => ListView(
         padding: const EdgeInsets.all(18),
         children: [
@@ -696,10 +743,10 @@ class ParentAccountPage extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Phụ huynh',
+                          snapshot.data?['fullName']?.toString() ?? 'Phụ huynh',
                           style: Theme.of(context).textTheme.titleLarge,
                         ),
-                        Text(snapshot.data ?? 'Đang tải...'),
+                        Text(snapshot.data?['email']?.toString() ?? 'Đang tải...'),
                       ],
                     ),
                   ),
@@ -708,8 +755,30 @@ class ParentAccountPage extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: snapshot.hasData ? () => _editAccount(snapshot.data!) : null,
+                  icon: const Icon(Icons.edit_rounded),
+                  label: const Text('Sửa thông tin'),
+                  style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(50)),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: _changePassword,
+                  icon: const Icon(Icons.password_rounded),
+                  label: const Text('Đổi mật khẩu'),
+                  style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(50)),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
           FilledButton.icon(
-            onPressed: onManagePremium,
+            onPressed: widget.onManagePremium,
             icon: const Icon(Icons.workspace_premium_rounded),
             label: const Text('Thanh toán và quản lý Premium'),
             style: FilledButton.styleFrom(
@@ -718,7 +787,34 @@ class ParentAccountPage extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           OutlinedButton.icon(
-            onPressed: onLogout,
+            onPressed: () => _showFeedback(context),
+            icon: const Icon(Icons.rate_review_rounded),
+            label: const Text('Gửi phản hồi'),
+            style: OutlinedButton.styleFrom(
+              minimumSize: const Size.fromHeight(54),
+            ),
+          ),
+          const SizedBox(height: 12),
+          _AccountSection(
+            title: 'Thông báo',
+            icon: Icons.notifications_rounded,
+            child: FutureBuilder<List<Map<String, dynamic>>>(
+              future: _notifications,
+              builder: (context, snapshot) => _NotificationList(items: snapshot.data),
+            ),
+          ),
+          const SizedBox(height: 12),
+          _AccountSection(
+            title: 'Lịch sử phản hồi',
+            icon: Icons.history_rounded,
+            child: FutureBuilder<List<Map<String, dynamic>>>(
+              future: _feedback,
+              builder: (context, snapshot) => _FeedbackHistory(items: snapshot.data),
+            ),
+          ),
+          const SizedBox(height: 12),
+          OutlinedButton.icon(
+            onPressed: widget.onLogout,
             icon: const Icon(Icons.logout_rounded),
             label: const Text('Đăng xuất'),
             style: OutlinedButton.styleFrom(
@@ -729,4 +825,107 @@ class ParentAccountPage extends StatelessWidget {
       ),
     ),
   );
+
+  Future<void> _editAccount(Map<String, dynamic> account) async {
+    final name = await _prompt('Sửa thông tin', 'Họ tên', account['fullName']?.toString());
+    if (name == null || !mounted) return;
+    final email = await _prompt('Sửa thông tin', 'Email', account['email']?.toString());
+    if (email == null) return;
+    await _run(() => _service.updateAccount(name, email));
+  }
+
+  Future<void> _changePassword() async {
+    final current = await _prompt('Đổi mật khẩu', 'Mật khẩu hiện tại', null, obscure: true);
+    if (current == null || !mounted) return;
+    final next = await _prompt('Đổi mật khẩu', 'Mật khẩu mới (ít nhất 8 ký tự)', null, obscure: true);
+    if (next == null) return;
+    await _run(() => _service.changePassword(current, next));
+  }
+
+  Future<void> _run(Future<Object?> Function() action) async {
+    try {
+      await action();
+      if (!mounted) return;
+      setState(_reload);
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Đã cập nhật thành công.')));
+    } catch (error) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$error')));
+    }
+  }
+
+  Future<String?> _prompt(String title, String label, String? initial, {bool obscure = false}) async {
+    final controller = TextEditingController(text: initial);
+    final result = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(title),
+        content: TextField(controller: controller, obscureText: obscure, decoration: InputDecoration(labelText: label)),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Hủy')),
+          FilledButton(onPressed: () => Navigator.pop(context, controller.text.trim()), child: const Text('Lưu')),
+        ],
+      ),
+    );
+    controller.dispose();
+    return result == null || result.isEmpty ? null : result;
+  }
+}
+
+class _AccountSection extends StatelessWidget {
+  const _AccountSection({required this.title, required this.icon, required this.child});
+  final String title;
+  final IconData icon;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => Card(
+    child: Padding(
+      padding: const EdgeInsets.all(16),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [Icon(icon), const SizedBox(width: 8), Text(title, style: Theme.of(context).textTheme.titleMedium)]),
+        const SizedBox(height: 12),
+        child,
+      ]),
+    ),
+  );
+}
+
+class _NotificationList extends StatelessWidget {
+  const _NotificationList({this.items});
+  final List<Map<String, dynamic>>? items;
+
+  @override
+  Widget build(BuildContext context) {
+    if (items == null) return const LinearProgressIndicator();
+    if (items!.isEmpty) return const Text('Chưa có thông báo mới.');
+    return Column(
+      children: [for (final item in items!.take(8)) ListTile(
+        contentPadding: EdgeInsets.zero,
+        leading: const Icon(Icons.notifications_none_rounded),
+        title: Text(item['title']?.toString() ?? 'Thông báo'),
+        subtitle: Text(item['message']?.toString() ?? ''),
+      )],
+    );
+  }
+}
+
+class _FeedbackHistory extends StatelessWidget {
+  const _FeedbackHistory({this.items});
+  final List<Map<String, dynamic>>? items;
+
+  @override
+  Widget build(BuildContext context) {
+    if (items == null) return const LinearProgressIndicator();
+    if (items!.isEmpty) return const Text('Bạn chưa gửi phản hồi nào.');
+    return Column(
+      children: [for (final item in items!) ListTile(
+        contentPadding: EdgeInsets.zero,
+        leading: Text('${item['experienceRating'] ?? 0}★', style: const TextStyle(fontWeight: FontWeight.bold)),
+        title: Text(item['improvementNote']?.toString().isNotEmpty == true ? item['improvementNote'].toString() : 'Không có nội dung'),
+        subtitle: Text(item['adminResponse']?.toString().isNotEmpty == true
+            ? 'Admin: ${item['adminResponse']}'
+            : 'Trạng thái: ${item['status'] ?? 'New'}'),
+      )],
+    );
+  }
 }

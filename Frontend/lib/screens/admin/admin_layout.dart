@@ -31,6 +31,28 @@ class _AdminLayoutState extends State<AdminLayout> {
     const AdminOperationsView(),
   ];
 
+  Future<void> _handleLogout() async {
+    await AuthService().logout();
+    if (!mounted) return;
+
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute<void>(
+        builder: (_) => LoginScreen(
+          profileStorage: const LocalProfileStorage(),
+          onLogin: (ctx) {
+            Navigator.of(ctx).pushReplacement(
+              MaterialPageRoute<void>(
+                builder: (_) => const AdminLayout(),
+              ),
+            );
+          },
+          onRegistrationCompleted: (_) {},
+        ),
+      ),
+      (route) => false,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -64,84 +86,46 @@ class _AdminLayoutState extends State<AdminLayout> {
                 alignment: Alignment.bottomCenter,
                 child: Padding(
                   padding: const EdgeInsets.only(bottom: 20),
-                  child: IconButton(
-                    icon: const Icon(Icons.logout, color: Colors.red),
+                  child: IconButton.filledTonal(
+                    icon: const Icon(Icons.logout_rounded),
+                    color: AdminColors.red,
                     tooltip: 'Đăng xuất',
-                    onPressed: () async {
-                      await AuthService().logout();
-                      if (context.mounted) {
-                        Navigator.of(context).pushAndRemoveUntil(
-                          MaterialPageRoute<void>(
-                            builder: (_) => LoginScreen(
-                              profileStorage: const LocalProfileStorage(),
-                              onLogin: (ctx) {
-                                Navigator.of(ctx).pushReplacement(
-                                  MaterialPageRoute(
-                                    builder: (_) => const AdminLayout(),
-                                  ),
-                                );
-                              },
-                              onRegistrationCompleted: (_) {},
-                            ),
-                          ),
-                          (route) => false,
-                        );
-                      }
-                    },
-                  ),
-                ),
-                trailing: Expanded(
-                  child: Align(
-                    alignment: Alignment.bottomCenter,
-                    child: Padding(
-                      padding: const EdgeInsets.only(bottom: 20),
-                      child: IconButton.filledTonal(
-                        icon: const Icon(Icons.logout_rounded),
-                        color: AdminColors.red,
-                        tooltip: 'Đăng xuất',
-                        onPressed: _handleLogout,
-                        style: IconButton.styleFrom(
-                          minimumSize: const Size(44, 44),
-                          backgroundColor: AdminColors.red.withValues(
-                            alpha: 0.08,
-                          ),
-                        ),
+                    onPressed: _handleLogout,
+                    style: IconButton.styleFrom(
+                      minimumSize: const Size(44, 44),
+                      backgroundColor: AdminColors.red.withValues(
+                        alpha: 0.08,
                       ),
                     ),
                   ),
                 ),
-                destinations: const [
-                  NavigationRailDestination(
-                    icon: Icon(Icons.dashboard_outlined),
-                    selectedIcon: Icon(Icons.dashboard_rounded),
-                    label: Text('Tổng quan'),
-                  ),
-                  NavigationRailDestination(
-                    icon: Icon(Icons.people_outline_rounded),
-                    selectedIcon: Icon(Icons.people_rounded),
-                    label: Text('Người dùng'),
-                  ),
-                  NavigationRailDestination(
-                    icon: Icon(Icons.map_outlined),
-                    selectedIcon: Icon(Icons.map_rounded),
-                    label: Text('Nhóm bài học'),
-                  ),
-                  NavigationRailDestination(
-                    icon: Icon(Icons.menu_book_outlined),
-                    selectedIcon: Icon(Icons.menu_book_rounded),
-                    label: Text('Bài học'),
-                  ),
-                  NavigationRailDestination(
-                    icon: Icon(Icons.psychology_alt_outlined),
-                    selectedIcon: Icon(Icons.psychology_alt_rounded),
-                    label: Text('Kỹ năng'),
-                  ),
-                ],
               ),
-              const VerticalDivider(
-                thickness: 1,
-                width: 1,
-                color: AdminColors.line,
+            ),
+            destinations: const [
+              NavigationRailDestination(
+                icon: Icon(Icons.dashboard_outlined),
+                selectedIcon: Icon(Icons.dashboard_rounded),
+                label: Text('Tổng quan'),
+              ),
+              NavigationRailDestination(
+                icon: Icon(Icons.people_outline_rounded),
+                selectedIcon: Icon(Icons.people_rounded),
+                label: Text('Người dùng'),
+              ),
+              NavigationRailDestination(
+                icon: Icon(Icons.map_outlined),
+                selectedIcon: Icon(Icons.map_rounded),
+                label: Text('Nhóm bài học'),
+              ),
+              NavigationRailDestination(
+                icon: Icon(Icons.menu_book_outlined),
+                selectedIcon: Icon(Icons.menu_book_rounded),
+                label: Text('Bài học'),
+              ),
+              NavigationRailDestination(
+                icon: Icon(Icons.psychology_alt_outlined),
+                selectedIcon: Icon(Icons.psychology_alt_rounded),
+                label: Text('Kỹ năng'),
               ),
               NavigationRailDestination(
                 icon: Icon(Icons.support_agent_outlined),
