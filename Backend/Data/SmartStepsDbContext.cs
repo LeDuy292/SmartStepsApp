@@ -33,6 +33,10 @@ public class SmartStepsDbContext : DbContext
     public DbSet<ChildLinkCode> ChildLinkCodes { get; set; } = null!;
     public DbSet<LessonAssignment> LessonAssignments { get; set; } = null!;
     public DbSet<ParentActivityConfirmation> ParentActivityConfirmations { get; set; } = null!;
+    public DbSet<ChildTask> ChildTasks { get; set; } = null!;
+    public DbSet<TaskProgress> TaskProgresses { get; set; } = null!;
+    public DbSet<RewardItem> RewardItems { get; set; } = null!;
+    public DbSet<RewardRedemption> RewardRedemptions { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -640,5 +644,77 @@ public class SmartStepsDbContext : DbContext
         modelBuilder.Entity<Flashcard>().HasData(flashcards);
         modelBuilder.Entity<SituationSkill>().HasData(situationSkills);
         modelBuilder.Entity<ParentReviewQuestion>().HasData(parentReviewQuestions);
+
+        modelBuilder.Entity<ChildTask>().HasData(
+            new ChildTask
+            {
+                TaskId = 1,
+                ParentId = 1,
+                Title = "Tự gấp chăn sau khi ngủ dậy",
+                Description = "Thu dọn đồ đạc ngăn nắp 10 phút",
+                RewardPoints = 20,
+                Frequency = "Daily",
+                Status = "Active",
+                CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)
+            },
+            new ChildTask
+            {
+                TaskId = 2,
+                ParentId = 1,
+                Title = "Sắp xếp góc học tập",
+                Description = "Xếp sách vở gọn gàng 15 phút",
+                RewardPoints = 30,
+                Frequency = "Daily",
+                Status = "Active",
+                CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)
+            },
+            new ChildTask
+            {
+                TaskId = 3,
+                ParentId = 1,
+                Title = "Giúp bố mẹ tưới cây",
+                Description = "Tưới cây cảnh ngoài sân 10 phút",
+                RewardPoints = 25,
+                Frequency = "Daily",
+                Status = "Active",
+                CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)
+            }
+        );
+
+        modelBuilder.Entity<RewardItem>().HasData(
+            new RewardItem
+            {
+                RewardId = 1,
+                ParentId = 1,
+                Title = "Hộp bút siêu anh hùng",
+                Description = "Hộp bút 3D cao cấp nhiều ngăn",
+                CostPoints = 500,
+                RewardType = "Real",
+                IsActive = true,
+                CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)
+            },
+            new RewardItem
+            {
+                RewardId = 2,
+                ParentId = 1,
+                Title = "30 phút xem hoạt hình",
+                Description = "Thêm 30 phút giải trí cuối tuần",
+                CostPoints = 300,
+                RewardType = "Real",
+                IsActive = true,
+                CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)
+            },
+            new RewardItem
+            {
+                RewardId = 3,
+                ParentId = 1,
+                Title = "👑 Mũ Phù Thủy Ảo",
+                Description = "Trang phục siêu cấp cho Avatar của bé",
+                CostPoints = 50,
+                RewardType = "Virtual",
+                IsActive = true,
+                CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)
+            }
+        );
     }
 }

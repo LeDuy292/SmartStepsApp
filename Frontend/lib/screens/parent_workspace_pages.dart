@@ -250,26 +250,24 @@ class _WeeklyOverview extends StatelessWidget {
                 ],
               );
             }
-            return IntrinsicHeight(
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Expanded(flex: 4, child: accuracy),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    flex: 6,
-                    child: Column(
-                      children: [
-                        for (var index = 0; index < items.length; index++) ...[
-                          items[index],
-                          if (index < items.length - 1)
-                            const SizedBox(height: 8),
-                        ],
+            return Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(flex: 4, child: accuracy),
+                const SizedBox(width: 12),
+                Expanded(
+                  flex: 6,
+                  child: Column(
+                    children: [
+                      for (var index = 0; index < items.length; index++) ...[
+                        items[index],
+                        if (index < items.length - 1)
+                          const SizedBox(height: 8),
                       ],
-                    ),
+                    ],
                   ),
-                ],
-              ),
+                ),
+              ],
             );
           },
         ),

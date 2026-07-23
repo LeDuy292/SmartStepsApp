@@ -6,7 +6,9 @@ build/
 .flutter-plugins-dependencies
 .pub-cache/
 .pub/
-/build/
+Frontend/.dart_tool/
+Frontend/build/
+Frontend/.flutter-plugins-dependencies
 
 # IDEs and Editors
 .idea/
@@ -17,16 +19,16 @@ build/
 # Logs
 *.log
 
-# Windows
+# Windows & Mac
 Thumbs.db
 Desktop.ini
-
-# Mac
 .DS_Store
 
-# Backend
+# Backend & Temp Build
 Backend/bin/
 Backend/obj/
+Backend/temp-build/
+temp-build/
 *.user
 *.suo
 *.userosscache

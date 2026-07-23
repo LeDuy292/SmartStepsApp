@@ -123,6 +123,19 @@ app.UseAuthorization();
 app.MapGet("/health", () => Results.Text("OK"));
 app.MapControllers();
 
+using (var scope = app.Services.CreateScope())
+{
+    try
+    {
+        var db = scope.ServiceProvider.GetRequiredService<SmartStepsDbContext>();
+        db.Database.EnsureCreated();
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"DB Init warning: {ex.Message}");
+    }
+}
+
 app.Run();
 
 static bool IsLoopbackOrigin(string origin)

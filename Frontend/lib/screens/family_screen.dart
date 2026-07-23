@@ -1,7 +1,9 @@
+
 import 'package:flutter/material.dart';
 
 import '../services/family_service.dart';
 import '../theme/duo_theme.dart';
+import 'parent_task_reward_screen.dart';
 
 class FamilyScreen extends StatefulWidget {
   const FamilyScreen({super.key});
@@ -382,6 +384,23 @@ class _ChildCard extends StatelessWidget {
                       title: 'Giám sát hoạt động thực hành',
                       subtitle: 'Xem và xác nhận hoạt động trẻ đã hoàn thành',
                       onTap: () => _showActivitySheet(context, id, name),
+                    ),
+                    const SizedBox(height: 10),
+                    _ActionCard(
+                      icon: Icons.stars_rounded,
+                      title: '⚡ Nhiệm vụ & Duyệt quà thưởng',
+                      subtitle: 'Giao việc nhà, bài tập & duyệt quà thưởng cho bé',
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => ParentTaskRewardScreen(
+                              parentId: 1,
+                              childId: id,
+                            ),
+                          ),
+                        );
+                      },
                     ),
                   ],
                 ),

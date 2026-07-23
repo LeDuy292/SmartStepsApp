@@ -31,6 +31,8 @@ import 'parent_workspace_pages.dart';
 import 'profile_screen.dart';
 import 'quick_review_screen.dart';
 import 'register_screen.dart';
+import 'tasks_screen.dart';
+import 'rewards_screen.dart';
 
 part 'lesson/lesson_game_section.dart';
 
@@ -735,7 +737,7 @@ class _SmartStepsAppState extends State<SmartStepsApp> {
           authGateway: widget.authGateway,
         ),
       ),
-      (route) => false,
+      (route) => route.isFirst,
     );
   }
 
@@ -1332,6 +1334,20 @@ class _SmartStepsCatalogPageState extends State<SmartStepsCatalogPage>
                           unawaited(_openLesson());
                         },
                       ),
+                TasksScreen(
+                  childId: 1,
+                  currentPoints: (_profile?.totalSkillPoints ?? 0) > 0 ? _profile!.totalSkillPoints : 1250,
+                  onPointsChanged: (pts) {
+                    setState(() {});
+                  },
+                ),
+                RewardsScreen(
+                  childId: 1,
+                  currentPoints: (_profile?.totalSkillPoints ?? 0) > 0 ? _profile!.totalSkillPoints : 1250,
+                  onPointsChanged: (pts) {
+                    setState(() {});
+                  },
+                ),
                 const _PracticeTabPage(),
                 ProfileScreen(
                   profileStorage: widget.profileStorage,
@@ -2111,7 +2127,7 @@ class _SmartStepsBottomNavigation extends StatelessWidget {
                 isSelected: currentIndex == 0,
                 onTap: () => onSelected(0),
               ),
-              if (isParent)
+              if (isParent) ...[
                 _SmartStepsBottomNavigationItem(
                   key: const ValueKey('learn-tab-button'),
                   icon: Icons.map_rounded,
@@ -2122,21 +2138,44 @@ class _SmartStepsBottomNavigation extends StatelessWidget {
                     AnalyticsService.trackEvent('view_progress_tab');
                   },
                 ),
-              if (!isParent)
+                _SmartStepsBottomNavigationItem(
+                  key: const ValueKey('profile-tab-button'),
+                  icon: Icons.person_rounded,
+                  label: 'Tài khoản',
+                  isSelected: currentIndex == 2,
+                  onTap: () => onSelected(2),
+                ),
+              ],
+              if (!isParent) ...[
+                _SmartStepsBottomNavigationItem(
+                  key: const ValueKey('tasks-tab-button'),
+                  icon: Icons.stars_rounded,
+                  label: 'Nhiệm vụ',
+                  isSelected: currentIndex == 1,
+                  onTap: () => onSelected(1),
+                ),
+                _SmartStepsBottomNavigationItem(
+                  key: const ValueKey('rewards-tab-button'),
+                  icon: Icons.card_giftcard_rounded,
+                  label: 'Cửa hàng',
+                  isSelected: currentIndex == 2,
+                  onTap: () => onSelected(2),
+                ),
                 _SmartStepsBottomNavigationItem(
                   key: const ValueKey('practice-tab-button'),
                   icon: Icons.bolt_rounded,
                   label: 'Luyện tập',
-                  isSelected: currentIndex == 1,
-                  onTap: () => onSelected(1),
+                  isSelected: currentIndex == 3,
+                  onTap: () => onSelected(3),
                 ),
-              _SmartStepsBottomNavigationItem(
-                key: const ValueKey('profile-tab-button'),
-                icon: isParent ? Icons.person_rounded : Icons.face_rounded,
-                label: isParent ? 'Tài khoản' : 'Bé',
-                isSelected: currentIndex == 2,
-                onTap: () => onSelected(2),
-              ),
+                _SmartStepsBottomNavigationItem(
+                  key: const ValueKey('profile-tab-button'),
+                  icon: Icons.face_rounded,
+                  label: 'Bé',
+                  isSelected: currentIndex == 4,
+                  onTap: () => onSelected(4),
+                ),
+              ],
             ],
           ),
         ),

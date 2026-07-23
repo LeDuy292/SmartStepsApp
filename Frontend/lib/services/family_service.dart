@@ -88,6 +88,51 @@ class FamilyService {
     'note': note,
   });
 
+  Future<void> updateChild(int childId, String name, String email) async =>
+      _send('/api/family/children/$childId', {
+        'fullName': name,
+        'email': email,
+      });
+
+  Future<void> resetChildPassword(int childId, String password) async =>
+      _send('/api/family/children/$childId/reset-password', {
+        'password': password,
+      });
+
+  Future<void> setChildStatus(int childId, String status) async =>
+      _send('/api/family/children/$childId/status', {
+        'status': status,
+      });
+
+  Future<void> unlinkChild(int childId) async {
+    final response = await http.delete(
+      _uri('/api/family/children/$childId/link'),
+      headers: await _headers(),
+    );
+    _ensureSuccess(response);
+  }
+
+  Future<Map<String, dynamic>> getAccount() async =>
+      _getMap('/api/family/account');
+
+  Future<List<Map<String, dynamic>>> getFeedbackHistory() async =>
+      _getList('/api/feedback');
+
+  Future<List<Map<String, dynamic>>> getNotifications() async =>
+      _getList('/api/family/notifications');
+
+  Future<void> updateAccount(String name, String email) async =>
+      _send('/api/family/account', {
+        'fullName': name,
+        'email': email,
+      });
+
+  Future<void> changePassword(String current, String next) async =>
+      _send('/api/family/account/change-password', {
+        'currentPassword': current,
+        'newPassword': next,
+      });
+
   Future<List<Map<String, dynamic>>> _getList(String path) async {
     final response = await http.get(_uri(path), headers: await _headers());
     _ensureSuccess(response);
@@ -144,8 +189,9 @@ class FamilyService {
 
   Future<Map<String, String>> _headers({bool json = false}) async {
     final token = await _authService.getToken();
-    if (token == null)
+    if (token == null) {
       throw const FamilyServiceException('Phiên đăng nhập đã hết hạn.');
+    }
     return {
       'Authorization': 'Bearer $token',
       if (json) 'Content-Type': 'application/json',
