@@ -14,6 +14,39 @@ class FamilyService {
 
   Future<List<Map<String, dynamic>>> getChildren() async =>
       _getList('/api/family/children');
+  Future<Map<String, dynamic>> getAccount() async =>
+      _getMap('/api/family/account');
+
+  Future<List<Map<String, dynamic>>> getFeedbackHistory() async =>
+      _getList('/api/feedback');
+
+  Future<List<Map<String, dynamic>>> getNotifications() async =>
+      _getList('/api/family/notifications');
+
+  Future<void> updateAccount(String name, String email) async =>
+      _put('/api/family/account', {'fullName': name, 'email': email});
+
+  Future<void> changePassword(
+    String currentPassword,
+    String newPassword,
+  ) async => _send('/api/family/account/change-password', {
+    'currentPassword': currentPassword,
+    'newPassword': newPassword,
+  });
+
+  Future<void> updateChild(int childId, String name, String email) async =>
+      _put('/api/family/children/$childId', {'fullName': name, 'email': email});
+
+  Future<void> resetChildPassword(int childId, String password) async => _send(
+    '/api/family/children/$childId/reset-password',
+    {'newPassword': password},
+  );
+
+  Future<void> setChildStatus(int childId, String status) async =>
+      _patch('/api/family/children/$childId/status', {'status': status});
+
+  Future<void> unlinkChild(int childId) async =>
+      _delete('/api/family/children/$childId/link');
 
   Future<Map<String, dynamic>> getOverview(int childId) async =>
       _getMap('/api/family/children/$childId/overview');
@@ -75,6 +108,29 @@ class FamilyService {
       headers: await _headers(json: true),
       body: jsonEncode(body),
     );
+    _ensureSuccess(response);
+  }
+
+  Future<void> _put(String path, Map<String, dynamic> body) async {
+    final response = await http.put(
+      _uri(path),
+      headers: await _headers(json: true),
+      body: jsonEncode(body),
+    );
+    _ensureSuccess(response);
+  }
+
+  Future<void> _patch(String path, Map<String, dynamic> body) async {
+    final response = await http.patch(
+      _uri(path),
+      headers: await _headers(json: true),
+      body: jsonEncode(body),
+    );
+    _ensureSuccess(response);
+  }
+
+  Future<void> _delete(String path) async {
+    final response = await http.delete(_uri(path), headers: await _headers());
     _ensureSuccess(response);
   }
 
