@@ -170,7 +170,7 @@ class RegistrationViewModel extends ChangeNotifier {
   String? _validateCurrentStep() {
     return switch (currentStep) {
       RegistrationStep.name => _validateName(),
-      RegistrationStep.age => _draft.role == 'Parent' ? null : _validateAge(),
+      RegistrationStep.age => (isSurveyOnly || _draft.role == 'Child') ? _validateAge() : null,
       RegistrationStep.gender =>
         _draft.gender == null ? 'Hãy chọn giới tính của bé.' : null,
       RegistrationStep.goals =>

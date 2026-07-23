@@ -34,6 +34,26 @@
 
   <!-- GA4_SCRIPT_PLACEHOLDER -->
 
+  <!-- Google Sign-In JS bridge -->
+  <script>
+    window.triggerGoogleSignIn = function() {
+      // Find the GSI iframe button rendered by flutter google_sign_in_web
+      var iframe = document.querySelector('iframe[src*="accounts.google.com"]');
+      if (iframe) {
+        // Try clicking inside the iframe's document
+        try {
+          iframe.contentDocument.querySelector('div[role="button"]').click();
+        } catch(e) {
+          // Cross-origin fallback: click the iframe container element
+          iframe.click();
+        }
+        return true;
+      }
+      // If no iframe found, GSI not ready yet
+      return false;
+    };
+  </script>
+
   <script>
     window.si = window.si || function () { (window.siq = window.siq || []).push(arguments); };
     const isLocalhost = ['localhost', '127.0.0.1'].includes(window.location.hostname);

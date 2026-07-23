@@ -31,7 +31,7 @@ void main() {
     await tester.tap(find.text('Tiếp tục'));
     await tester.pump();
 
-    expect(find.text('Hãy nhập tên của bé.'), findsOneWidget);
+    expect(find.text('Hãy nhập họ tên phụ huynh.'), findsOneWidget);
     expect(
       find.byKey(const ValueKey('registration-name-field')),
       findsOneWidget,

@@ -30,9 +30,13 @@ public class AuthController : ControllerBase
     public async Task<IActionResult> Register([FromBody] RegisterRequest request)
     {
         var publicRole = NormalizePublicRole(request.Role);
+        if (publicRole == "Child")
+        {
+            return BadRequest(new { Message = "Trẻ em không thể đăng ký trực tiếp. Vui lòng đăng ký tài khoản Phụ huynh." });
+        }
         if (publicRole is null)
         {
-            return BadRequest(new { Message = "Public registration only supports Child or Parent accounts." });
+            publicRole = "Parent";
         }
 
         var normalizedEmail = request.Email.Trim().ToLowerInvariant();
@@ -81,6 +85,11 @@ public class AuthController : ControllerBase
             return Unauthorized(new { Message = "Tài khoản của bạn đã bị khóa hoặc ngừng hoạt động." });
         }
 
+        if (string.Equals(user.Role, "Child", StringComparison.OrdinalIgnoreCase))
+        {
+            return Unauthorized(new { Message = "Tài khoản Trẻ em không thể đăng nhập trực tiếp. Vui lòng đăng nhập bằng tài khoản Phụ huynh." });
+        }
+
         var token = GenerateJwtToken(user);
         
         return Ok(new AuthResponse
@@ -96,33 +105,32 @@ public class AuthController : ControllerBase
     [HttpPost("google")]
     public async Task<IActionResult> GoogleLogin([FromBody] GoogleLoginRequest request)
     {
-        var publicRole = string.IsNullOrWhiteSpace(request.Role)
-            ? "Child"
-            : NormalizePublicRole(request.Role);
-        if (publicRole is null)
-        {
-            return BadRequest(new { Message = "Google registration only supports Child or Parent accounts." });
-        }
+        var publicRole = string.IsNullOrWhiteSpace(request.Role) || string.Equals(request.Role, "Child", StringComparison.OrdinalIgnoreCase)
+            ? "Parent"
+            : NormalizePublicRole(request.Role) ?? "Parent";
 
         try
         {
-            var settings = new GoogleJsonWebSignature.ValidationSettings()
+            var configuredClientId = _configuration["GoogleAuth:ClientId"]?.Trim();
+            var settings = new GoogleJsonWebSignature.ValidationSettings();
+            if (!string.IsNullOrWhiteSpace(configuredClientId))
             {
-                Audience = new List<string>() { _configuration["GoogleAuth:ClientId"]! }
-            };
+                settings.Audience = new List<string> { configuredClientId };
+            }
 
             var payload = await GoogleJsonWebSignature.ValidateAsync(request.IdToken, settings);
+            var normalizedEmail = payload.Email.Trim().ToLowerInvariant();
 
-            var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == payload.Email);
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.Email.ToLower() == normalizedEmail);
 
             if (user == null)
             {
                 // Create user if not exists
                 user = new User
                 {
-                    FullName = payload.Name,
-                    Email = payload.Email,
-                    Password = BCrypt.Net.BCrypt.HashPassword(Guid.NewGuid().ToString()), // Random password for google users
+                    FullName = payload.Name ?? "Google User",
+                    Email = normalizedEmail,
+                    Password = BCrypt.Net.BCrypt.HashPassword(Guid.NewGuid().ToString()),
                     Role = publicRole,
                     Status = "Active",
                     CreatedAt = DateTime.UtcNow
@@ -131,10 +139,20 @@ public class AuthController : ControllerBase
                 _context.Users.Add(user);
                 await _context.SaveChangesAsync();
             }
-            else if (user.Status != "Active")
+            else
             {
-                Console.WriteLine($"GoogleLogin failed: user.Status is {user.Status} for email {user.Email}");
-                return Unauthorized(new { Message = "Tài khoản của bạn đã bị khóa hoặc ngừng hoạt động." });
+                if (!string.Equals(user.Status, "Active", StringComparison.OrdinalIgnoreCase))
+                {
+                    Console.WriteLine($"GoogleLogin failed: user.Status is {user.Status} for email {user.Email}");
+                    return Unauthorized(new { Message = "Tài khoản của bạn đã bị khóa hoặc ngừng hoạt động." });
+                }
+
+                if (string.Equals(user.Role, "Child", StringComparison.OrdinalIgnoreCase))
+                {
+                    user.Role = "Parent";
+                    user.UpdatedAt = DateTime.UtcNow;
+                    await _context.SaveChangesAsync();
+                }
             }
 
             var token = GenerateJwtToken(user);
@@ -150,13 +168,13 @@ public class AuthController : ControllerBase
         }
         catch (InvalidJwtException ex)
         {
-            Console.WriteLine($"GoogleLogin failed: InvalidJwtException - {ex.Message}");
-            return Unauthorized(new { Message = "Invalid Google token." });
+            Console.WriteLine($"GoogleLogin failed: InvalidJwtException - {ex.Message}\n{ex}");
+            return Unauthorized(new { Message = $"Invalid Google token: {ex.Message}" });
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"GoogleLogin failed: Exception - {ex.Message}");
-            return StatusCode(500, new { Message = "Internal server error." });
+            Console.WriteLine($"GoogleLogin failed: Exception - {ex.Message}\n{ex}");
+            return StatusCode(500, new { Message = $"Internal server error: {ex.Message}" });
         }
     }
 

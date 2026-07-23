@@ -10,7 +10,7 @@ class RegistrationDraft {
     this.acceptedTerms = false,
     this.email = '',
     this.password = '',
-    this.role = 'Child',
+    this.role = 'Parent',
   });
 
   final String childName;

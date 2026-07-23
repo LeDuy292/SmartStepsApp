@@ -49,25 +49,6 @@ class RegistrationNameStep extends StatelessWidget {
       mascotAsset: 'assets/images/mascot/mascot-cat-happy-wave.webp',
       child: Column(
         children: [
-          if (!isSurveyOnly) ...[
-            SegmentedButton<String>(
-              segments: const [
-                ButtonSegment<String>(
-                  value: 'Parent',
-                  icon: Icon(Icons.family_restroom_rounded),
-                  label: Text('Phụ huynh'),
-                ),
-                ButtonSegment<String>(
-                  value: 'Child',
-                  icon: Icon(Icons.child_care_rounded),
-                  label: Text('Trẻ em'),
-                ),
-              ],
-              selected: {selectedRole},
-              onSelectionChanged: (roles) => onRoleChanged(roles.first),
-            ),
-            const SizedBox(height: 16),
-          ],
           TextField(
             key: const ValueKey('registration-name-field'),
             controller: nameController,
@@ -82,7 +63,7 @@ class RegistrationNameStep extends StatelessWidget {
               fontWeight: FontWeight.w700,
             ),
             decoration: _inputDecoration(
-              selectedRole == 'Parent' ? 'Họ tên phụ huynh' : 'Tên của bé',
+              'Họ tên Phụ huynh',
             ),
           ),
           if (!isSurveyOnly) ...[

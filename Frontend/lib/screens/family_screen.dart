@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 
 import '../services/family_service.dart';
 import '../theme/duo_theme.dart';
+import '../widgets/child_selection_dialog.dart';
 import 'parent_task_reward_screen.dart';
 
 class FamilyScreen extends StatefulWidget {
@@ -30,13 +31,15 @@ class _FamilyScreenState extends State<FamilyScreen> {
     appBar: AppBar(
       title: const Text('Trẻ em'),
       actions: [
-        IconButton(
-          tooltip: 'Liên kết bằng mã',
-          onPressed: _linkChild,
-          icon: const Icon(Icons.link_rounded),
+        TextButton.icon(
+          onPressed: () async {
+            await ChildSelectionDialog.show(context);
+          },
+          icon: const Icon(Icons.swap_horiz_rounded),
+          label: const Text('Đổi / Chọn bé'),
         ),
         IconButton(
-          tooltip: 'Tạo tài khoản trẻ',
+          tooltip: 'Tạo hồ sơ trẻ',
           onPressed: _createChild,
           icon: const Icon(Icons.person_add_rounded),
         ),
@@ -90,17 +93,13 @@ class _FamilyScreenState extends State<FamilyScreen> {
   }
 
   Future<void> _createChild() async {
-    final name = await _textDialog('Tạo tài khoản trẻ', 'Họ tên');
-    if (name == null) return;
-    final email = await _textDialog('Tạo tài khoản trẻ', 'Email');
-    if (email == null) return;
-    final password = await _textDialog(
-      'Tạo tài khoản trẻ',
-      'Mật khẩu (ít nhất 8 ký tự)',
-      obscure: true,
+    final result = await ChildSelectionDialog.show(
+      context,
+      initialCreateMode: true,
     );
-    if (password == null) return;
-    await _run(() => _service.createChild(name, email, password));
+    if (result != null) {
+      setState(_reload);
+    }
   }
 
   Future<String?> _textDialog(
@@ -198,31 +197,15 @@ class _FamilyHero extends StatelessWidget {
             ),
           ],
         );
-        final actions = Wrap(
-          spacing: 10,
-          runSpacing: 10,
-          children: [
-            FilledButton.icon(
-              style: FilledButton.styleFrom(
-                fixedSize: const Size(190, 48),
-                backgroundColor: DuoColors.textPrimary,
-                foregroundColor: Colors.white,
-              ),
-              onPressed: onLink,
-              icon: const Icon(Icons.link_rounded),
-              label: const Text('Liên kết trẻ'),
-            ),
-            OutlinedButton.icon(
-              style: OutlinedButton.styleFrom(
-                fixedSize: const Size(190, 48),
-                foregroundColor: DuoColors.textPrimary,
-                side: const BorderSide(color: DuoColors.textPrimary),
-              ),
-              onPressed: onCreate,
-              icon: const Icon(Icons.person_add_alt_1_rounded),
-              label: const Text('Tạo tài khoản'),
-            ),
-          ],
+        final actions = FilledButton.icon(
+          style: FilledButton.styleFrom(
+            fixedSize: const Size(200, 48),
+            backgroundColor: DuoColors.textPrimary,
+            foregroundColor: Colors.white,
+          ),
+          onPressed: onCreate,
+          icon: const Icon(Icons.person_add_alt_1_rounded),
+          label: const Text('Tạo tài khoản cho trẻ'),
         );
         if (compact) {
           return Column(
@@ -261,24 +244,19 @@ class _EmptyFamily extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           Text(
-            'Chưa có trẻ được liên kết',
+            'Chưa có hồ sơ trẻ em',
             style: Theme.of(context).textTheme.titleLarge,
           ),
           const SizedBox(height: 8),
           const Text(
-            'Nhập mã từ tài khoản trẻ hoặc tạo một tài khoản mới.',
+            'Hãy tạo hồ sơ trẻ mới để bắt đầu đồng hành và giao bài học cho bé.',
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 20),
           FilledButton.icon(
-            onPressed: onLink,
-            icon: const Icon(Icons.link),
-            label: const Text('Nhập mã liên kết'),
-          ),
-          TextButton.icon(
             onPressed: onCreate,
-            icon: const Icon(Icons.person_add),
-            label: const Text('Tạo tài khoản trẻ'),
+            icon: const Icon(Icons.person_add_rounded),
+            label: const Text('Tạo tài khoản cho trẻ'),
           ),
         ],
       ),
@@ -326,7 +304,7 @@ class _ChildCard extends StatelessWidget {
         ),
         title: Text(name, style: const TextStyle(fontWeight: FontWeight.w900)),
         subtitle: Text(
-          '${child['email']?.toString() ?? ''} · ${child['status'] == 'Locked' ? 'Đã khóa' : 'Đang hoạt động'}',
+          'Trạng thái: ${child['status'] == 'Locked' ? 'Đã khóa' : 'Đang hoạt động'}',
         ),
         trailing: PopupMenuButton<String>(
           tooltip: 'Quản lý tài khoản trẻ',

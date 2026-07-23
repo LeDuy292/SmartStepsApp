@@ -52,6 +52,9 @@ class AuthService implements AuthGateway {
       await _googleSignIn.initialize(
         clientId:
             '924493667390-cqn55fuer1la0p0vqsvotmubvtsbb7ic.apps.googleusercontent.com',
+        serverClientId: kIsWeb
+            ? null
+            : '924493667390-cqn55fuer1la0p0vqsvotmubvtsbb7ic.apps.googleusercontent.com',
       );
     } catch (_) {
       // The web plugin can already be initialized after a hot reload.
@@ -146,21 +149,20 @@ class AuthService implements AuthGateway {
       final GoogleSignInAuthentication googleAuth = googleUser.authentication;
       final String? idToken = googleAuth.idToken;
 
-      if (idToken == null) return 'Không thể lấy token từ Google.';
+      if (idToken == null || idToken.isEmpty) return 'Không thể lấy token từ Google.';
 
       final response = await http.post(
         Uri.parse('$baseUrl/google'),
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'IdToken': idToken, 'Role': 'Child'}),
+        body: jsonEncode({'IdToken': idToken, 'Role': 'Parent'}),
       );
 
       final data = jsonDecode(response.body);
       if (response.statusCode == 200) {
         await _saveToken(data['token']);
-        await _restoreBasicChildProfileIfMissing(data);
         return null;
       }
-      return data['message'] ?? 'Đăng nhập Google thất bại.';
+      return data['message'] ?? data['Message'] ?? 'Đăng nhập Google thất bại.';
     } catch (e) {
       if (kDebugMode) print('Process Google user error: $e');
       return 'Lỗi kết nối đến máy chủ.';
@@ -171,7 +173,9 @@ class AuthService implements AuthGateway {
   Future<String?> loginWithGoogle() async {
     try {
       await ensureGoogleSignInInitialized();
-      final GoogleSignInAccount googleUser = await _googleSignIn.authenticate();
+      final GoogleSignInAccount googleUser = await _googleSignIn.authenticate(
+        scopeHint: ['email'],
+      );
 
       return await processGoogleUser(googleUser);
     } catch (e) {

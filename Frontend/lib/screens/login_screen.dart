@@ -61,11 +61,11 @@ class _LoginScreenState extends State<LoginScreen> {
       _isLoading = true;
     });
 
-    final errorMessage = await _authService.processGoogleUser(account);
+    final success = await _authService.processGoogleUser(account);
 
     if (!mounted) return;
 
-    if (errorMessage == null) {
+    if (success == null || success == true) {
       await _checkRoleAndRoute();
     } else {
       setState(() {
@@ -73,7 +73,9 @@ class _LoginScreenState extends State<LoginScreen> {
       });
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text(errorMessage)));
+      ).showSnackBar(
+        const SnackBar(content: Text('Đăng nhập Google thất bại.')),
+      );
     }
   }
 
@@ -121,11 +123,11 @@ class _LoginScreenState extends State<LoginScreen> {
       _isLoading = true;
     });
 
-    final errorMessage = await _authService.loginWithGoogle();
+    final success = await _authService.loginWithGoogle();
 
     if (!mounted) return;
 
-    if (errorMessage == null) {
+    if (success == null || success == true) {
       await _checkRoleAndRoute();
     } else {
       setState(() {
@@ -133,7 +135,9 @@ class _LoginScreenState extends State<LoginScreen> {
       });
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text(errorMessage)));
+      ).showSnackBar(
+        const SnackBar(content: Text('Đăng nhập Google thất bại hoặc đã bị hủy.')),
+      );
     }
   }
 
@@ -376,12 +380,11 @@ class _LoginScreenState extends State<LoginScreen> {
                             children: [
                               kIsWeb
                                   ? (_isGoogleReady
-                                        ? buildWebGoogleAuthButton()
-                                        : const SizedBox(
-                                            width: 42,
-                                            height: 42,
-                                            child: CircularProgressIndicator(),
-                                          ))
+                                      ? buildWebGoogleAuthButton()
+                                      : const SizedBox(
+                                          width: 42,
+                                          height: 42,
+                                        ))
                                   : GestureDetector(
                                       onTap: _isLoading
                                           ? null
@@ -393,7 +396,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                           style: TextStyle(
                                             color: Color(0xFF4285F4),
                                             fontSize: 28,
-                                            fontWeight: FontWeight.w800,
+                                            fontWeight: FontWeight.bold,
                                           ),
                                         ),
                                       ),

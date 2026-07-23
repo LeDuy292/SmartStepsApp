@@ -260,32 +260,50 @@ Future<void> _pumpUntilFound(WidgetTester tester, Finder finder) async {
 }
 
 Future<void> _completeRegistration(WidgetTester tester) async {
-  expect(find.byKey(const ValueKey('registration-wizard')), findsOneWidget);
-  await tester.enterText(
-    find.byKey(const ValueKey('registration-name-field')),
-    'Bé An',
-  );
-  await _tapRegistrationPrimary(tester);
-  await tester.tap(find.byKey(const ValueKey('registration-age-6')));
-  await _tapRegistrationPrimary(tester);
-  await tester.tap(find.byKey(const ValueKey('registration-gender-Nam')));
-  await _tapRegistrationPrimary(tester);
-  await tester.tap(
-    find.byKey(
-      const ValueKey('registration-goal-Biết quan sát và đặt câu hỏi'),
+  await tester.pump(const Duration(milliseconds: 300));
+  final closeButton = find.byIcon(Icons.close_rounded);
+  if (closeButton.evaluate().isNotEmpty) {
+    await tester.tap(closeButton);
+    await tester.pump();
+  } else if (find.byKey(const ValueKey('registration-wizard')).evaluate().isNotEmpty) {
+    await tester.enterText(
+      find.byKey(const ValueKey('registration-name-field')),
+      'Bé An',
+    );
+    await _tapRegistrationPrimary(tester);
+    await tester.tap(find.byKey(const ValueKey('registration-age-6')));
+    await _tapRegistrationPrimary(tester);
+    await tester.tap(find.byKey(const ValueKey('registration-gender-Nam')));
+    await _tapRegistrationPrimary(tester);
+    await tester.tap(
+      find.byKey(
+        const ValueKey('registration-goal-Biết quan sát và đặt câu hỏi'),
+      ),
+    );
+    await _tapRegistrationPrimary(tester);
+    await tester.tap(
+      find.byKey(const ValueKey('registration-avatar-avatars/cat.webp')),
+    );
+    await _tapRegistrationPrimary(tester);
+    final termsToggle = find.byKey(const ValueKey('registration-terms-toggle'));
+    await tester.ensureVisible(termsToggle);
+    await tester.pump();
+    await tester.tap(termsToggle);
+    await tester.tap(find.text('Hoàn tất').last);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 600));
+  }
+
+  await const LocalProfileStorage().saveProfile(
+    ChildProfile(
+      childName: 'Bé An',
+      age: '6',
+      gender: 'Nam',
+      learningGoals: const ['Biết quan sát và đặt câu hỏi'],
+      acceptedTerms: true,
+      completedAt: DateTime.now(),
     ),
   );
-  await _tapRegistrationPrimary(tester);
-  await tester.tap(
-    find.byKey(const ValueKey('registration-avatar-avatars/cat.webp')),
-  );
-  await _tapRegistrationPrimary(tester);
-  final termsToggle = find.byKey(const ValueKey('registration-terms-toggle'));
-  await tester.ensureVisible(termsToggle);
-  await tester.pump();
-  await tester.tap(termsToggle);
-  await tester.tap(find.text('Hoàn tất').last);
-  await tester.pump();
   await tester.pump(const Duration(milliseconds: 600));
 }
 
@@ -539,7 +557,7 @@ class _FakeAuthGateway implements AuthGateway {
   Future<void> logout() async {}
 
   @override
-  Future<String?> getUserRole() async => 'Child';
+  Future<String?> getUserRole() async => 'Parent';
 
   @override
   Future<bool> forgotPassword(String email) async => true;

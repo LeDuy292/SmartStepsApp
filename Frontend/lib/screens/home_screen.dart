@@ -32,6 +32,7 @@ import 'profile_screen.dart';
 import 'quick_review_screen.dart';
 import 'register_screen.dart';
 import 'tasks_screen.dart';
+import '../widgets/child_selection_dialog.dart';
 import 'rewards_screen.dart';
 
 part 'lesson/lesson_game_section.dart';
@@ -800,6 +801,7 @@ class _SmartStepsCatalogPageState extends State<SmartStepsCatalogPage>
   bool _isFeedbackPromptOpen = false;
   late final Future<String?> _roleFuture;
   String? _userRole;
+  bool _inParentWorkspace = false;
 
   bool get _isParent => _userRole == 'Parent';
 
@@ -831,6 +833,25 @@ class _SmartStepsCatalogPageState extends State<SmartStepsCatalogPage>
 
   Future<void> _showStartupPrompts() async {
     await _roleFuture;
+    if (_isParent) {
+      final selected = await ChildSelectionDialog.show(
+        context,
+        profileStorage: widget.profileStorage,
+        canDismiss: true,
+      );
+      if (selected?['mode'] == 'parent_workspace' && mounted) {
+        setState(() {
+          _inParentWorkspace = true;
+          _selectedTabIndex = 0;
+        });
+      } else if (mounted) {
+        setState(() {
+          _inParentWorkspace = false;
+        });
+        await _loadProfile();
+      }
+    }
+
     if (_isParent && widget.showPremiumOffer) {
       await _showPremiumOfferIfNeeded();
     }
@@ -1295,7 +1316,7 @@ class _SmartStepsCatalogPageState extends State<SmartStepsCatalogPage>
     return Scaffold(
       body: IndexedStack(
         index: _selectedTabIndex,
-        children: _isParent
+        children: (_isParent && _inParentWorkspace)
             ? [
                 const ParentChildrenPage(),
                 const ParentProgressPage(),
@@ -1352,12 +1373,25 @@ class _SmartStepsCatalogPageState extends State<SmartStepsCatalogPage>
                 ProfileScreen(
                   profileStorage: widget.profileStorage,
                   onLogout: widget.onLogout,
+                  onChildSelected: (selected) {
+                    if (selected?['mode'] == 'parent_workspace') {
+                      setState(() {
+                        _inParentWorkspace = true;
+                        _selectedTabIndex = 0;
+                      });
+                    } else if (selected != null) {
+                      setState(() {
+                        _inParentWorkspace = false;
+                      });
+                      unawaited(_loadProfile());
+                    }
+                  },
                 ),
               ],
       ),
       bottomNavigationBar: _SmartStepsBottomNavigation(
         currentIndex: _selectedTabIndex,
-        isParent: _isParent,
+        isParent: _isParent && _inParentWorkspace,
         onSelected: (index) {
           setState(() {
             _selectedTabIndex = index;

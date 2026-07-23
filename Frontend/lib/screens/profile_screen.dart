@@ -7,6 +7,7 @@ import '../services/local_profile_storage.dart';
 import '../services/registration_avatar_service.dart';
 import '../theme/duo_theme.dart';
 import '../widgets/duo_components.dart';
+import '../widgets/child_selection_dialog.dart';
 import 'family_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -15,11 +16,13 @@ class ProfileScreen extends StatefulWidget {
     required this.profileStorage,
     required this.onLogout,
     this.onManagePremium,
+    this.onChildSelected,
   });
 
   final LocalProfileStorage profileStorage;
   final void Function(BuildContext context) onLogout;
   final VoidCallback? onManagePremium;
+  final void Function(Map<String, dynamic>? selected)? onChildSelected;
 
   @override
   State<ProfileScreen> createState() => _ProfileScreenState();
@@ -39,6 +42,121 @@ class _ProfileScreenState extends State<ProfileScreen> {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.profileStorage != widget.profileStorage) {
       _profileFuture = widget.profileStorage.readProfile();
+    }
+  }
+
+  Future<void> _showParentGate(BuildContext context) async {
+    final now = DateTime.now();
+    final num1 = 3 + (now.second % 6);
+    final num2 = 2 + (now.millisecond % 5);
+    final correctAnswer = num1 + num2;
+
+    final controller = TextEditingController();
+    String? errorText;
+
+    final passed = await showDialog<bool>(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: const Row(
+            children: [
+              Icon(Icons.lock_rounded, color: DuoColors.darkYellow),
+              SizedBox(width: 8),
+              Text('Khóa Phụ huynh', style: TextStyle(fontWeight: FontWeight.bold)),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Dành riêng cho Phụ huynh. Vui lòng tính nhẩm phép tính bên dưới:',
+                style: TextStyle(fontSize: 14),
+              ),
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: DuoColors.softYellow,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Center(
+                  child: Text(
+                    '$num1  +  $num2  =  ?',
+                    style: const TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: DuoColors.textPrimary,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 14),
+              TextField(
+                controller: controller,
+                keyboardType: TextInputType.number,
+                autofocus: true,
+                decoration: InputDecoration(
+                  labelText: 'Nhập kết quả',
+                  errorText: errorText,
+                  border: const OutlineInputBorder(),
+                ),
+                onSubmitted: (value) {
+                  if (int.tryParse(value.trim()) == correctAnswer) {
+                    Navigator.pop(context, true);
+                  } else {
+                    setDialogState(() {
+                      errorText = 'Kết quả chưa đúng, vui lòng thử lại.';
+                    });
+                  }
+                },
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Hủy'),
+            ),
+            FilledButton(
+              onPressed: () {
+                if (int.tryParse(controller.text.trim()) == correctAnswer) {
+                  Navigator.pop(context, true);
+                } else {
+                  setDialogState(() {
+                    errorText = 'Kết quả chưa đúng, vui lòng thử lại.';
+                  });
+                }
+              },
+              child: const Text('Xác nhận'),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    controller.dispose();
+
+    if (passed == true && context.mounted) {
+      final selected = await ChildSelectionDialog.show(
+        context,
+        profileStorage: widget.profileStorage,
+      );
+      if (!mounted) return;
+      if (widget.onChildSelected != null) {
+        widget.onChildSelected!(selected);
+      } else if (selected?['mode'] == 'parent_workspace') {
+        Navigator.of(context).push(
+          MaterialPageRoute<void>(
+            builder: (_) => const FamilyScreen(),
+          ),
+        );
+      } else if (selected != null) {
+        setState(() {
+          _profileFuture = widget.profileStorage.readProfile();
+        });
+      }
     }
   }
 
@@ -115,19 +233,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   FutureBuilder<String?>(
                     future: AuthService().getUserRole(),
                     builder: (context, roleSnapshot) {
-                      if (roleSnapshot.data == 'Child') {
-                        return Padding(
-                          padding: const EdgeInsets.only(bottom: 10),
-                          child: FilledButton.icon(
-                            onPressed: _showParentLinkCode,
-                            icon: const Icon(Icons.link_rounded),
-                            label: const Text('Mã liên kết phụ huynh'),
-                            style: FilledButton.styleFrom(
-                              minimumSize: const Size(0, 52),
-                            ),
-                          ),
-                        );
-                      }
                       if (roleSnapshot.data != 'Parent') {
                         return const SizedBox.shrink();
                       }
@@ -136,16 +241,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
-                            OutlinedButton.icon(
-                              onPressed: () => Navigator.of(context).push(
-                                MaterialPageRoute<void>(
-                                  builder: (_) => const FamilyScreen(),
-                                ),
-                              ),
-                              icon: const Icon(Icons.family_restroom_rounded),
-                              label: const Text('Quản lý trẻ và giao bài'),
-                              style: OutlinedButton.styleFrom(
+                            FilledButton.icon(
+                              onPressed: () => _showParentGate(context),
+                              icon: const Icon(Icons.lock_outline_rounded),
+                              label: const Text('Khu vực Phụ huynh (Khóa Phụ huynh)'),
+                              style: FilledButton.styleFrom(
                                 minimumSize: const Size(0, 52),
+                                backgroundColor: DuoColors.darkYellow,
                               ),
                             ),
                             if (widget.onManagePremium != null) ...[

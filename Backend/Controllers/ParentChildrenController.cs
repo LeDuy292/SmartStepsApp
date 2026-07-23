@@ -62,73 +62,31 @@ public sealed class ParentChildrenController(SmartStepsDbContext dbContext) : Co
         return NoContent();
     }
 
-    [HttpPost("link-codes")]
-    [Authorize(Roles = "Child")]
-    public async Task<IActionResult> CreateLinkCode(CancellationToken cancellationToken)
-    {
-        if (!TryGetUserId(out var childId)) return Forbid();
-        var now = DateTime.UtcNow;
-        var activeCodes = await dbContext.ChildLinkCodes
-            .Where(item => item.ChildId == childId && item.UsedAt == null && item.ExpiresAt > now)
-            .ToListAsync(cancellationToken);
-        foreach (var item in activeCodes) item.ExpiresAt = now;
-
-        string code;
-        do
-        {
-            code = RandomNumberGenerator.GetInt32(0, 1_000_000).ToString("D6");
-        } while (await dbContext.ChildLinkCodes.AnyAsync(item => item.Code == code, cancellationToken));
-
-        var link = new ChildLinkCode
-        {
-            ChildId = childId,
-            Code = code,
-            CreatedAt = now,
-            ExpiresAt = now.AddMinutes(15)
-        };
-        dbContext.ChildLinkCodes.Add(link);
-        await dbContext.SaveChangesAsync(cancellationToken);
-        return Ok(new { link.Code, link.ExpiresAt });
-    }
-
-    [HttpPost("children/link")]
-    [Authorize(Roles = "Parent")]
-    public async Task<IActionResult> LinkChild(LinkChildRequest request, CancellationToken cancellationToken)
-    {
-        if (!TryGetUserId(out var parentId)) return Forbid();
-        var code = request.Code?.Trim();
-        var now = DateTime.UtcNow;
-        var link = await dbContext.ChildLinkCodes.Include(item => item.Child).SingleOrDefaultAsync(
-            item => item.Code == code && item.UsedAt == null && item.ExpiresAt > now,
-            cancellationToken);
-        if (link is null) return BadRequest(new { message = "Mã liên kết không hợp lệ hoặc đã hết hạn." });
-        if (link.Child.ParentId is not null && link.Child.ParentId != parentId)
-            return Conflict(new { message = "Tài khoản trẻ đã được liên kết với phụ huynh khác." });
-
-        link.Child.ParentId = parentId;
-        link.Child.UpdatedAt = now;
-        link.UsedAt = now;
-        link.UsedByParentId = parentId;
-        await dbContext.SaveChangesAsync(cancellationToken);
-        return Ok(new { link.Child.UserId, link.Child.FullName, link.Child.Email });
-    }
-
     [HttpPost("children")]
     [Authorize(Roles = "Parent")]
     public async Task<IActionResult> CreateChild(CreateChildRequest request, CancellationToken cancellationToken)
     {
         if (!TryGetUserId(out var parentId)) return Forbid();
-        var email = request.Email.Trim().ToLowerInvariant();
-        if (string.IsNullOrWhiteSpace(request.FullName) || string.IsNullOrWhiteSpace(email) || request.Password.Length < 8)
-            return BadRequest(new { message = "Họ tên, email và mật khẩu tối thiểu 8 ký tự là bắt buộc." });
+        var fullName = request.FullName?.Trim();
+        if (string.IsNullOrWhiteSpace(fullName))
+            return BadRequest(new { message = "Họ tên của bé là bắt buộc." });
+
+        var email = string.IsNullOrWhiteSpace(request.Email)
+            ? $"child_{Guid.NewGuid().ToString("N")[..8]}@smartsteps.local"
+            : request.Email.Trim().ToLowerInvariant();
+
         if (await dbContext.Users.AnyAsync(item => item.Email == email, cancellationToken))
             return Conflict(new { message = "Email đã được sử dụng." });
 
+        var password = string.IsNullOrWhiteSpace(request.Password) || request.Password.Length < 8
+            ? "12345678"
+            : request.Password;
+
         var child = new User
         {
-            FullName = request.FullName.Trim(),
+            FullName = fullName,
             Email = email,
-            Password = BCrypt.Net.BCrypt.HashPassword(request.Password),
+            Password = BCrypt.Net.BCrypt.HashPassword(password),
             Role = "Child",
             Status = "Active",
             ParentId = parentId,
@@ -464,7 +422,7 @@ public sealed class ParentChildrenController(SmartStepsDbContext dbContext) : Co
 }
 
 public sealed record LinkChildRequest(string? Code);
-public sealed record CreateChildRequest(string FullName, string Email, string Password);
+public sealed record CreateChildRequest(string FullName, string? Email, string? Password);
 public sealed record ActivityConfirmationRequest(int SituationId, string? Note);
 public sealed record UpdateAccountRequest(string? FullName, string? Email);
 public sealed record ChangePasswordRequest(string? CurrentPassword, string? NewPassword);
