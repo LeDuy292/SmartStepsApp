@@ -299,7 +299,8 @@ class _UserListViewState extends State<UserListView> {
                   ),
           ),
           const SizedBox(height: 10),
-          _PaginationBar(
+          AdminPagination(
+            showWhenSinglePage: true,
             page: _page,
             totalPages: _totalPages,
             onPrevious: _page > 1
@@ -427,7 +428,7 @@ class _UserCard extends StatelessWidget {
                 radius: 18,
                 backgroundColor: roleColor.withValues(alpha: 0.15),
                 child: Text(
-                  name.characters.first.toUpperCase(),
+                  adminInitial(name),
                   style: TextStyle(
                     color: roleColor,
                     fontWeight: FontWeight.w900,
@@ -503,52 +504,6 @@ class _MiniAction extends StatelessWidget {
       constraints: const BoxConstraints(minWidth: 34, minHeight: 34),
       padding: EdgeInsets.zero,
       visualDensity: VisualDensity.compact,
-    );
-  }
-}
-
-class _PaginationBar extends StatelessWidget {
-  const _PaginationBar({
-    required this.page,
-    required this.totalPages,
-    required this.onPrevious,
-    required this.onNext,
-  });
-
-  final int page;
-  final int totalPages;
-  final VoidCallback? onPrevious;
-  final VoidCallback? onNext;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        AdminCircleButton(
-          icon: Icons.chevron_left_rounded,
-          tooltip: 'Trang trước',
-          onPressed: onPrevious,
-          backgroundColor: Colors.white,
-        ),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 14),
-          child: Text(
-            'Trang $page / $totalPages',
-            style: const TextStyle(
-              color: AdminColors.ink,
-              fontWeight: FontWeight.w900,
-            ),
-          ),
-        ),
-        AdminCircleButton(
-          icon: Icons.chevron_right_rounded,
-          tooltip: 'Trang sau',
-          onPressed: onNext,
-          backgroundColor: Colors.white,
-          color: AdminColors.amber,
-        ),
-      ],
     );
   }
 }

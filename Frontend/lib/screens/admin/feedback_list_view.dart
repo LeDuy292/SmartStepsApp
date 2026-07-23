@@ -22,6 +22,8 @@ class _FeedbackListViewState extends State<FeedbackListView> {
   String _searchQuery = '';
   int _ratingFilter = 0;
   String _sort = 'newest';
+  int _page = 1;
+  static const int _pageSize = 4;
 
   @override
   void initState() {
@@ -76,6 +78,21 @@ class _FeedbackListViewState extends State<FeedbackListView> {
     });
 
     return feedback;
+  }
+
+  int get _feedbackTotalPages {
+    return math.max(1, (_visibleFeedback.length / _pageSize).ceil());
+  }
+
+  List<AdminFeedback> get _pagedFeedback {
+    final safePage = math.min(_page, _feedbackTotalPages);
+    final start = (safePage - 1) * _pageSize;
+    final feedback = _visibleFeedback;
+    if (start >= feedback.length) {
+      return const [];
+    }
+    final end = math.min(start + _pageSize, feedback.length);
+    return feedback.sublist(start, end);
   }
 
   int _dateValue(AdminFeedback item) {
@@ -137,7 +154,10 @@ class _FeedbackListViewState extends State<FeedbackListView> {
                     onChanged: (value) {
                       if (value != null) {
                         setSheetState(() => _ratingFilter = value);
-                        setState(() => _ratingFilter = value);
+                        setState(() {
+                          _ratingFilter = value;
+                          _page = 1;
+                        });
                       }
                     },
                   ),
@@ -166,7 +186,10 @@ class _FeedbackListViewState extends State<FeedbackListView> {
                     onChanged: (value) {
                       if (value != null) {
                         setSheetState(() => _sort = value);
-                        setState(() => _sort = value);
+                        setState(() {
+                          _sort = value;
+                          _page = 1;
+                        });
                       }
                     },
                   ),
@@ -183,6 +206,7 @@ class _FeedbackListViewState extends State<FeedbackListView> {
   Widget build(BuildContext context) {
     final data = _data;
     final visibleFeedback = _visibleFeedback;
+    final pagedFeedback = _pagedFeedback;
 
     return AdminPageFrame(
       child: Column(
@@ -229,14 +253,20 @@ class _FeedbackListViewState extends State<FeedbackListView> {
                         _RatingQuickFilters(
                           selectedRating: _ratingFilter,
                           onChanged: (rating) {
-                            setState(() => _ratingFilter = rating);
+                            setState(() {
+                              _ratingFilter = rating;
+                              _page = 1;
+                            });
                           },
                         ),
                         const SizedBox(height: 10),
                         AdminSearchBar(
                           hintText: 'Tìm kiếm theo tên hoặc nội dung...',
                           onChanged: (value) {
-                            setState(() => _searchQuery = value);
+                            setState(() {
+                              _searchQuery = value;
+                              _page = 1;
+                            });
                           },
                           onFilter: _showFilters,
                         ),
@@ -257,12 +287,25 @@ class _FeedbackListViewState extends State<FeedbackListView> {
                             message: 'Thử đổi bộ lọc hoặc từ khóa tìm kiếm.',
                           )
                         else
-                          ...visibleFeedback.map(
+                          ...pagedFeedback.map(
                             (feedback) => Padding(
                               padding: const EdgeInsets.only(bottom: 10),
                               child: _FeedbackCard(item: feedback),
                             ),
                           ),
+                        if (visibleFeedback.isNotEmpty) ...[
+                          const SizedBox(height: 2),
+                          AdminPagination(
+                            page: _page,
+                            totalPages: _feedbackTotalPages,
+                            onPrevious: _page > 1
+                                ? () => setState(() => _page--)
+                                : null,
+                            onNext: _page < _feedbackTotalPages
+                                ? () => setState(() => _page++)
+                                : null,
+                          ),
+                        ],
                       ],
                     ),
             ),
@@ -606,7 +649,7 @@ class _FeedbackCard extends StatelessWidget {
                   alpha: 0.75,
                 ),
                 child: Text(
-                  name.characters.first.toUpperCase(),
+                  adminInitial(name),
                   style: const TextStyle(
                     color: AdminColors.ink,
                     fontWeight: FontWeight.w900,

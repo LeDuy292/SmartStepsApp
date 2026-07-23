@@ -20,6 +20,8 @@ class _SkillListViewState extends State<SkillListView> {
   List<dynamic> _skills = [];
   bool _isLoading = true;
   String _searchQuery = '';
+  int _page = 1;
+  static const int _pageSize = 2;
 
   @override
   void initState() {
@@ -96,9 +98,28 @@ class _SkillListViewState extends State<SkillListView> {
     }).toList();
   }
 
+  int get _totalPages {
+    final count = _visibleSkills.length;
+    return count == 0 ? 1 : ((count - 1) ~/ _pageSize) + 1;
+  }
+
+  List<dynamic> get _pagedSkills {
+    final safePage = _page > _totalPages ? _totalPages : _page;
+    final start = (safePage - 1) * _pageSize;
+    final skills = _visibleSkills;
+    if (start >= skills.length) {
+      return const [];
+    }
+    final end = (start + _pageSize) > skills.length
+        ? skills.length
+        : start + _pageSize;
+    return skills.sublist(start, end);
+  }
+
   @override
   Widget build(BuildContext context) {
     final visibleSkills = _visibleSkills;
+    final pagedSkills = _pagedSkills;
 
     return AdminPageFrame(
       child: Column(
@@ -113,7 +134,10 @@ class _SkillListViewState extends State<SkillListView> {
           const SizedBox(height: 12),
           AdminSearchBar(
             hintText: 'Tìm kiếm kỹ năng...',
-            onChanged: (value) => setState(() => _searchQuery = value),
+            onChanged: (value) => setState(() {
+              _searchQuery = value;
+              _page = 1;
+            }),
             onFilter: () {},
           ),
           const SizedBox(height: 12),
@@ -129,10 +153,10 @@ class _SkillListViewState extends State<SkillListView> {
                     message: 'Tạo kỹ năng để phân loại nội dung học tập.',
                   )
                 : ListView.separated(
-                    itemCount: visibleSkills.length,
+                    itemCount: pagedSkills.length,
                     separatorBuilder: (_, _) => const SizedBox(height: 10),
                     itemBuilder: (context, index) {
-                      final skill = visibleSkills[index];
+                      final skill = pagedSkills[index];
                       return _SkillCard(
                         skill: skill,
                         color: _skillColor(index),
@@ -141,6 +165,13 @@ class _SkillListViewState extends State<SkillListView> {
                       );
                     },
                   ),
+          ),
+          const SizedBox(height: 8),
+          AdminPagination(
+            page: _page,
+            totalPages: _totalPages,
+            onPrevious: _page > 1 ? () => setState(() => _page--) : null,
+            onNext: _page < _totalPages ? () => setState(() => _page++) : null,
           ),
         ],
       ),
@@ -162,7 +193,6 @@ class _SkillChartPanel extends StatelessWidget {
   const _SkillChartPanel({required this.skills});
 
   final List<dynamic> skills;
-
   @override
   Widget build(BuildContext context) {
     final labels = skills.take(5).map((skill) {
@@ -229,7 +259,6 @@ class _FeaturedSkillCard extends StatelessWidget {
   const _FeaturedSkillCard({required this.onAdd});
 
   final VoidCallback onAdd;
-
   @override
   Widget build(BuildContext context) {
     return AdminPanel(
@@ -301,7 +330,6 @@ class _SkillCard extends StatelessWidget {
   final Color color;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
-
   @override
   Widget build(BuildContext context) {
     final usage = ((skill['usageCount'] as num?)?.toInt() ?? 0);
