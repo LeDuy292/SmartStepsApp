@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -30,7 +30,7 @@ namespace SmartStepsServer.Migrations
                 type: "character varying(30)",
                 maxLength: 30,
                 nullable: false,
-                defaultValue: "");
+                defaultValue: "Suggestion");
 
             migrationBuilder.AddColumn<DateTime>(
                 name: "ResolvedAt",
@@ -50,7 +50,7 @@ namespace SmartStepsServer.Migrations
                 type: "character varying(20)",
                 maxLength: 20,
                 nullable: false,
-                defaultValue: "");
+                defaultValue: "New");
 
             migrationBuilder.AddColumn<DateTime>(
                 name: "UpdatedAt",
@@ -164,6 +164,9 @@ namespace SmartStepsServer.Migrations
                 name: "IX_AppFeedback_SituationId",
                 table: "AppFeedback",
                 column: "SituationId");
+
+            migrationBuilder.Sql("UPDATE \"AppFeedback\" SET \"Category\" = 'Suggestion' WHERE \"Category\" IS NULL OR \"Category\" = ''");
+            migrationBuilder.Sql("UPDATE \"AppFeedback\" SET \"Status\" = 'New' WHERE \"Status\" IS NULL OR \"Status\" = ''");
 
             migrationBuilder.AddCheckConstraint(
                 name: "CK_AppFeedback_Category",

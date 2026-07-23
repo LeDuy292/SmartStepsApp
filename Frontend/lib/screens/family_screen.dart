@@ -46,10 +46,13 @@ class _FamilyScreenState extends State<FamilyScreen> {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
         }
-        if (snapshot.hasError) return Center(child: Text('${snapshot.error}'));
+        if (snapshot.hasError) {
+          return Center(child: Text('${snapshot.error}'));
+        }
         final children = snapshot.data ?? const [];
-        if (children.isEmpty)
+        if (children.isEmpty) {
           return _EmptyFamily(onLink: _linkChild, onCreate: _createChild);
+        }
         return RefreshIndicator(
           onRefresh: () async {
             setState(_reload);
@@ -328,10 +331,17 @@ class _ChildCard extends StatelessWidget {
           onSelected: (action) => _handleAccountAction(context, action),
           itemBuilder: (_) => [
             const PopupMenuItem(value: 'edit', child: Text('Sửa thông tin')),
-            const PopupMenuItem(value: 'password', child: Text('Đặt lại mật khẩu')),
+            const PopupMenuItem(
+              value: 'password',
+              child: Text('Đặt lại mật khẩu'),
+            ),
             PopupMenuItem(
               value: 'status',
-              child: Text(child['status'] == 'Locked' ? 'Mở khóa tài khoản' : 'Khóa tài khoản'),
+              child: Text(
+                child['status'] == 'Locked'
+                    ? 'Mở khóa tài khoản'
+                    : 'Khóa tài khoản',
+              ),
             ),
             const PopupMenuDivider(),
             const PopupMenuItem(value: 'unlink', child: Text('Hủy liên kết')),
@@ -387,13 +397,29 @@ class _ChildCard extends StatelessWidget {
     final childId = child['userId'] as int;
     try {
       if (action == 'edit') {
-        final name = await _prompt(context, 'Sửa tên trẻ', 'Họ tên', child['fullName']?.toString());
+        final name = await _prompt(
+          context,
+          'Sửa tên trẻ',
+          'Họ tên',
+          child['fullName']?.toString(),
+        );
         if (name == null || !context.mounted) return;
-        final email = await _prompt(context, 'Sửa email trẻ', 'Email', child['email']?.toString());
+        final email = await _prompt(
+          context,
+          'Sửa email trẻ',
+          'Email',
+          child['email']?.toString(),
+        );
         if (email == null) return;
         await familyService.updateChild(childId, name, email);
       } else if (action == 'password') {
-        final password = await _prompt(context, 'Đặt lại mật khẩu', 'Mật khẩu mới (ít nhất 8 ký tự)', null, obscure: true);
+        final password = await _prompt(
+          context,
+          'Đặt lại mật khẩu',
+          'Mật khẩu mới (ít nhất 8 ký tự)',
+          null,
+          obscure: true,
+        );
         if (password == null) return;
         await familyService.resetChildPassword(childId, password);
       } else if (action == 'status') {
@@ -406,10 +432,18 @@ class _ChildCard extends StatelessWidget {
           context: context,
           builder: (context) => AlertDialog(
             title: const Text('Hủy liên kết trẻ?'),
-            content: const Text('Tài khoản trẻ và dữ liệu học tập vẫn được giữ lại.'),
+            content: const Text(
+              'Tài khoản trẻ và dữ liệu học tập vẫn được giữ lại.',
+            ),
             actions: [
-              TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Hủy')),
-              FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Hủy liên kết')),
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('Hủy'),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.pop(context, true),
+                child: const Text('Hủy liên kết'),
+              ),
             ],
           ),
         );
@@ -418,11 +452,15 @@ class _ChildCard extends StatelessWidget {
       }
       onChanged();
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Đã cập nhật tài khoản trẻ.')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Đã cập nhật tài khoản trẻ.')),
+        );
       }
     } catch (error) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$error')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('$error')));
       }
     }
   }
@@ -439,10 +477,20 @@ class _ChildCard extends StatelessWidget {
       context: context,
       builder: (context) => AlertDialog(
         title: Text(title),
-        content: TextField(controller: controller, obscureText: obscure, decoration: InputDecoration(labelText: label)),
+        content: TextField(
+          controller: controller,
+          obscureText: obscure,
+          decoration: InputDecoration(labelText: label),
+        ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Hủy')),
-          FilledButton(onPressed: () => Navigator.pop(context, controller.text.trim()), child: const Text('Lưu')),
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Hủy'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, controller.text.trim()),
+            child: const Text('Lưu'),
+          ),
         ],
       ),
     );
@@ -495,10 +543,11 @@ class _ChildCard extends StatelessWidget {
         );
       }
     } catch (error) {
-      if (context.mounted)
+      if (context.mounted) {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text('$error')));
+      }
     }
   }
 }
@@ -592,8 +641,9 @@ class _ActivityPicker extends StatelessWidget {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           }
-          if (snapshot.hasError)
+          if (snapshot.hasError) {
             return Center(child: Text('${snapshot.error}'));
+          }
           final items = snapshot.data ?? const [];
           return Padding(
             padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
